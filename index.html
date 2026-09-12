@@ -1,0 +1,3365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Songwriting Expression Tool</title>
+<style>
+/* app.css — the unified app, same quiet room as the Sound Room. */
+:root {
+  --room: #14161d; --panel: #1b1e28; --panel-2: #262a37; --edge: #2c3040;
+  --ink: #e8e5dc; --muted: #8b90a4; --lamp: #e0a869; --lamp-soft: rgba(224,168,105,0.16);
+  --danger: #d98a8a;
+  --serif: "Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+  --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: radial-gradient(120% 80% at 50% -10%, #1b1f2b 0%, var(--room) 55%) fixed;
+  color: var(--ink); font-family: var(--sans); line-height: 1.5; -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 1000px; margin: 0 auto; padding: 1.6rem 1.2rem 4rem; }
+
+header.top { display: flex; align-items: baseline; gap: 1rem; margin-bottom: 0.8rem; }
+header.top h1 { font-family: var(--serif); font-weight: 500; font-size: 1.5rem; margin: 0; }
+#saved { color: var(--muted); font-size: 0.8rem; opacity: 0; transition: opacity 0.3s; }
+#saved.on { opacity: 1; }
+
+#nav { display: flex; flex-wrap: wrap; gap: 0.3rem; border-bottom: 1px solid var(--edge); padding-bottom: 0.7rem; margin-bottom: 1.4rem; }
+#nav button { font: inherit; font-size: 0.9rem; background: transparent; color: var(--muted); border: 1px solid transparent; border-radius: 8px; padding: 0.4rem 0.7rem; cursor: pointer; }
+#nav button:hover { color: var(--ink); }
+#nav button[aria-current="page"] { color: var(--room); background: var(--lamp); }
+
+h2 { font-family: var(--serif); font-weight: 500; }
+h3, h4 { margin: 0.2rem 0 0.6rem; }
+.muted { color: var(--muted); } .small { font-size: 0.85rem; }
+hr { border: 0; border-top: 1px solid var(--edge); margin: 1.4rem 0; }
+.row { display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; margin: 0.6rem 0; }
+.row.spread { justify-content: space-between; }
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1.6rem; }
+.grid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.2rem; }
+@media (max-width: 720px) { .two-col { grid-template-columns: 1fr; } }
+
+button.primary { font: inherit; background: var(--lamp); color: #201400; border: 0; padding: 0.6rem 1.1rem; border-radius: 9px; cursor: pointer; font-weight: 600; }
+button.ghost { font: inherit; background: transparent; color: var(--ink); border: 1px solid var(--edge); border-radius: 8px; padding: 0.4rem 0.7rem; cursor: pointer; }
+button.ghost:hover { border-color: var(--lamp); }
+button.ghost.sel { background: var(--lamp); color: var(--room); border-color: var(--lamp); }
+button.ghost.danger:hover { border-color: var(--danger); color: var(--danger); }
+select, input[type="text"], input:not([type]), textarea { background: var(--panel-2); color: var(--ink); border: 1px solid var(--edge); border-radius: 8px; padding: 0.45rem 0.55rem; font: inherit; }
+textarea { width: 100%; resize: vertical; }
+input[type="range"] { accent-color: var(--lamp); }
+label { color: var(--muted); font-size: 0.86rem; display: inline-flex; gap: 0.4rem; align-items: center; }
+
+.hero { text-align: center; padding: 3rem 1rem; }
+.hero h2 { font-size: clamp(1.6rem, 3.5vw, 2.4rem); max-width: 24ch; margin: 0 auto 0.6rem; }
+.hero .sub { color: var(--muted); max-width: 44ch; margin: 0 auto 1.6rem; font-family: var(--serif); font-style: italic; }
+.chips { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; }
+.chip { font: inherit; background: var(--panel); color: var(--ink); border: 1px solid var(--edge); border-radius: 20px; padding: 0.5rem 1rem; cursor: pointer; }
+.chip:hover { border-color: var(--lamp); color: var(--lamp); }
+
+.stage { animation: fade 0.25s ease; }
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .stage { animation: none; } }
+.qmeta { color: var(--muted); font-size: 0.8rem; margin: 0; }
+.question { font-family: var(--serif); font-size: 1.5rem; font-weight: 500; }
+
+.rawlist, .fraglist, .plainlist { list-style: none; padding: 0; margin: 0; }
+.rawitem { border: 1px solid var(--edge); border-radius: 10px; padding: 0.7rem 0.8rem; margin-bottom: 0.7rem; background: var(--panel); }
+.rawtext { margin-bottom: 0.2rem; }
+.pill { background: var(--panel-2); color: var(--muted); border: 1px solid var(--edge); border-radius: 12px; font-size: 0.72rem; padding: 0.05rem 0.5rem; }
+.seccard { border: 1px solid var(--edge); border-radius: 10px; padding: 0.7rem 0.8rem; margin-bottom: 0.8rem; background: var(--panel); }
+.frag { display: flex; align-items: center; gap: 0.5rem; padding: 0.25rem 0; flex-wrap: wrap; }
+.fragtext { flex: 1; }
+.prov { font-size: 0.7rem; border-radius: 10px; padding: 0.02rem 0.4rem; border: 1px solid var(--edge); color: var(--muted); }
+.prov.user { color: var(--lamp); border-color: var(--lamp); }
+.truth .t { font: inherit; font-size: 0.75rem; width: 1.5rem; height: 1.5rem; border-radius: 50%; border: 1px solid var(--edge); background: var(--panel-2); color: var(--muted); cursor: pointer; }
+.truth .t.sel { background: var(--lamp); color: var(--room); border-color: var(--lamp); }
+.plainlist li { padding: 0.15rem 0; }
+
+.controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.9rem; background: var(--panel); border: 1px solid var(--edge); border-radius: 12px; padding: 1rem 1.1rem; }
+.controls label { flex-direction: column; align-items: flex-start; gap: 0.3rem; }
+.controls select, .controls input { width: 100%; }
+.results { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-top: 1rem; }
+.direction { background: var(--panel); border: 1px solid var(--edge); border-top: 2px solid var(--edge); border-radius: 11px; padding: 0.9rem; transition: border-color 0.35s, box-shadow 0.35s; }
+.direction.playing { border-top-color: var(--lamp); box-shadow: 0 10px 40px -18px var(--lamp-soft); background: linear-gradient(180deg, var(--lamp-soft), transparent 40%), var(--panel); }
+.play { font-size: 0.95rem; width: 2.1rem; height: 2.1rem; border-radius: 50%; border: 1px solid var(--edge); background: var(--panel-2); color: var(--ink); cursor: pointer; }
+.play:hover { border-color: var(--lamp); color: var(--lamp); }
+.chords { font-family: var(--serif); font-size: 1.3rem; margin: 0.5rem 0 0.2rem; }
+
+.why { margin: 0.4rem 0; font-size: 0.92rem; }
+.why.hypothesis { color: #cfd3e0; font-style: italic; }
+.why.your_meaning { color: var(--muted); }
+.badge { display: inline-block; margin-right: 0.5rem; padding: 0.04rem 0.5rem; border-radius: 20px; font-size: 0.7rem; background: var(--panel-2); color: var(--muted); border: 1px solid var(--edge); }
+.why.theory .badge { color: var(--lamp); border-color: var(--lamp); }
+
+.leadsheet { background: var(--panel); border: 1px solid var(--edge); border-radius: 10px; padding: 1rem 1.1rem; white-space: pre-wrap; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.85rem; color: var(--ink); overflow-x: auto; }
+.safety { border: 1px solid var(--lamp); background: var(--lamp-soft); border-radius: 10px; padding: 1rem; }
+:focus-visible { outline: 2px solid var(--lamp); outline-offset: 2px; }
+
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>Songwriting Expression Tool</h1>
+    <span id="saved" aria-live="polite"></span>
+  </header>
+  <nav id="nav" aria-label="Stages"></nav>
+  <main id="view"></main>
+</div>
+<script type="module">
+// ===== src/theory/notes.js =====
+// notes.js
+// The foundation of the whole theory engine.
+//
+// We never represent a pitch by its pitch-class number alone (0-11), because a
+// pitch class cannot tell F# apart from Gb, or E# apart from F. Those are
+// different notes even though they sound the same, and spelling them correctly
+// is exactly what makes a theory engine trustworthy. So a note is a LETTER plus
+// an ACCIDENTAL offset. Spelling then falls out of interval arithmetic instead
+// of a lookup table, which is what lets us get F##, B#, Cb and E# right.
+
+const LETTERS = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
+
+// Semitone value of each natural letter within an octave.
+const LETTER_SEMITONE = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+
+const ACCIDENTAL_TO_STR = { '-2': 'bb', '-1': 'b', '0': '', '1': '#', '2': '##' };
+
+/**
+ * Parse a note name like "C", "F#", "Bb", "F##", "Cb" into { letter, accidental }.
+ * accidental is a signed integer: -2 bb, -1 b, 0 natural, +1 #, +2 ##.
+ */
+function parseNote(name) {
+  if (typeof name !== 'string' || name.length === 0) {
+    throw new Error(`Invalid note: ${JSON.stringify(name)}`);
+  }
+  const letter = name[0].toUpperCase();
+  if (!LETTERS.includes(letter)) {
+    throw new Error(`Invalid note letter in "${name}"`);
+  }
+  const suffix = name.slice(1);
+  let accidental = 0;
+  if (suffix === '' ) accidental = 0;
+  else if (/^#+$/.test(suffix)) accidental = suffix.length;
+  else if (/^b+$/.test(suffix)) accidental = -suffix.length;
+  else if (suffix === '♯') accidental = 1;
+  else if (suffix === '♭') accidental = -1;
+  else throw new Error(`Invalid accidental in "${name}"`);
+  return { letter, accidental };
+}
+
+/** Render a { letter, accidental } note back to a string. */
+function noteToString(note) {
+  const acc = ACCIDENTAL_TO_STR[String(note.accidental)];
+  if (acc === undefined) {
+    // Fall back for triple+ accidentals rather than throwing.
+    const n = note.accidental;
+    return note.letter + (n > 0 ? '#'.repeat(n) : 'b'.repeat(-n));
+  }
+  return note.letter + acc;
+}
+
+/** Pitch class (0-11) of a note. */
+function pitchClass(note) {
+  return (((LETTER_SEMITONE[note.letter] + note.accidental) % 12) + 12) % 12;
+}
+
+/**
+ * Given a target letter and a target pitch class, choose the accidental that
+ * spells that pitch class on that letter. Returns the smallest-magnitude
+ * accidental in the range [-5, 6] (in practice always within [-2, 2] for the
+ * diatonic material this engine generates).
+ */
+function accidentalForPitchClass(letter, targetPc) {
+  const natural = LETTER_SEMITONE[letter];
+  let raw = (((targetPc - natural) % 12) + 12) % 12; // 0..11
+  if (raw > 6) raw -= 12; // fold to -5..6 so we prefer flats/sharps over huge stacks
+  return raw;
+}
+
+/**
+ * Spell a note that is `letterSteps` diatonic steps above `reference` and
+ * `semitones` semitones above it. This single primitive powers both scale
+ * spelling (letterStep 1 per degree) and chord spelling (letterStep 2 per
+ * stacked third), guaranteeing consistent enharmonic results.
+ */
+function spellFrom(reference, letterSteps, semitones) {
+  const refLetterIndex = LETTERS.indexOf(reference.letter);
+  const letter = LETTERS[(((refLetterIndex + letterSteps) % 7) + 7) % 7];
+  const targetPc = (((pitchClass(reference) + semitones) % 12) + 12) % 12;
+  return { letter, accidental: accidentalForPitchClass(letter, targetPc) };
+}
+
+
+// ===== src/theory/ScaleEngine.js =====
+// ScaleEngine.js — deterministic scale spelling.
+
+// Semitone formulas (from data/music_theory_core.json scale_formulas).
+const SCALE_FORMULAS = {
+  major: [0, 2, 4, 5, 7, 9, 11],
+  natural_minor: [0, 2, 3, 5, 7, 8, 10],
+  harmonic_minor: [0, 2, 3, 5, 7, 8, 11],
+  melodic_minor_ascending: [0, 2, 3, 5, 7, 9, 11],
+  dorian: [0, 2, 3, 5, 7, 9, 10],
+  phrygian: [0, 1, 3, 5, 7, 8, 10],
+  lydian: [0, 2, 4, 6, 7, 9, 11],
+  mixolydian: [0, 2, 4, 5, 7, 9, 10],
+  aeolian: [0, 2, 3, 5, 7, 8, 10],
+  locrian: [0, 1, 3, 5, 6, 8, 10],
+};
+
+/**
+ * Build a scale as an array of { letter, accidental } notes.
+ * Each successive degree gets the next letter, so a 7-note scale always uses
+ * all seven letters exactly once — the reason spellings stay correct.
+ */
+function buildScaleNotes(tonic, scaleName) {
+  const formula = SCALE_FORMULAS[scaleName];
+  if (!formula) throw new Error(`Unknown scale: ${scaleName}`);
+  const root = typeof tonic === 'string' ? parseNote(tonic) : tonic;
+  return formula.map((semis, i) => spellFrom(root, i, semis));
+}
+
+/** Same, returned as note-name strings. */
+function buildScale(tonic, scaleName) {
+  return buildScaleNotes(tonic, scaleName).map(noteToString);
+}
+
+
+// ===== src/theory/ChordEngine.js =====
+// ChordEngine.js — deterministic chord spelling and quality classification.
+
+// Each chord tone carries its CHORDAL DEGREE (1,2,3,4,5,6,7,9...) plus its
+// semitone offset from the root. The degree fixes the letter (letterStep =
+// degree - 1), so an added 9th correctly lands a step above the root instead of
+// being mis-spelled as a stacked-third. This is what makes add9 / 6 / sus behave.
+const CHORD_INTERVALS = {
+  major: [[1, 0], [3, 4], [5, 7]],
+  minor: [[1, 0], [3, 3], [5, 7]],
+  diminished: [[1, 0], [3, 3], [5, 6]],
+  augmented: [[1, 0], [3, 4], [5, 8]],
+  sus2: [[1, 0], [2, 2], [5, 7]],
+  sus4: [[1, 0], [4, 5], [5, 7]],
+  major7: [[1, 0], [3, 4], [5, 7], [7, 11]],
+  dominant7: [[1, 0], [3, 4], [5, 7], [7, 10]],
+  minor7: [[1, 0], [3, 3], [5, 7], [7, 10]],
+  half_diminished7: [[1, 0], [3, 3], [5, 6], [7, 10]],
+  diminished7: [[1, 0], [3, 3], [5, 6], [7, 9]],
+  'minor-major7': [[1, 0], [3, 3], [5, 7], [7, 11]],
+  major6: [[1, 0], [3, 4], [5, 7], [6, 9]],
+  minor6: [[1, 0], [3, 3], [5, 7], [6, 9]],
+  add9: [[1, 0], [3, 4], [5, 7], [9, 14]],
+  minor_add9: [[1, 0], [3, 3], [5, 7], [9, 14]],
+  dominant9: [[1, 0], [3, 4], [5, 7], [7, 10], [9, 14]],
+  major9: [[1, 0], [3, 4], [5, 7], [7, 11], [9, 14]],
+  minor9: [[1, 0], [3, 3], [5, 7], [7, 10], [9, 14]],
+};
+
+// Semitone-only view, for data files that expect flat arrays.
+const CHORD_FORMULAS = Object.fromEntries(
+  Object.entries(CHORD_INTERVALS).map(([q, tones]) => [q, tones.map(([, s]) => s)])
+);
+
+const SYMBOL_SUFFIX = {
+  major: '', minor: 'm', diminished: 'dim', augmented: 'aug',
+  sus2: 'sus2', sus4: 'sus4',
+  major7: 'maj7', dominant7: '7', minor7: 'm7',
+  half_diminished7: 'm7b5', diminished7: 'dim7', 'minor-major7': 'm(maj7)',
+  major6: '6', minor6: 'm6', add9: 'add9', minor_add9: 'm(add9)',
+  dominant9: '9', major9: 'maj9', minor9: 'm9',
+};
+
+/** Spell a chord: root + quality -> ordered array of note strings. */
+function buildChordNotes(root, quality) {
+  const tones = CHORD_INTERVALS[quality];
+  if (!tones) throw new Error(`Unknown chord quality: ${quality}`);
+  const rootNote = typeof root === 'string' ? parseNote(root) : root;
+  return tones.map(([deg, semis]) => spellFrom(rootNote, deg - 1, semis));
+}
+
+function buildChord(root, quality) {
+  const rootNote = typeof root === 'string' ? parseNote(root) : root;
+  const notes = buildChordNotes(rootNote, quality).map(noteToString);
+  return { root: noteToString(rootNote), quality, notes, symbol: chordSymbol(rootNote, quality) };
+}
+
+function chordSymbol(root, quality) {
+  const rootStr = typeof root === 'string' ? root : noteToString(root);
+  const suffix = SYMBOL_SUFFIX[quality] ?? quality;
+  return rootStr + suffix;
+}
+
+/** Classify a TRIAD from the pitch-class intervals of its three notes. */
+function classifyTriad(notes) {
+  const [r, third, fifth] = notes.map((n) => (typeof n === 'string' ? parseNote(n) : n));
+  const rp = pitchClass(r);
+  const i3 = (((pitchClass(third) - rp) % 12) + 12) % 12;
+  const i5 = (((pitchClass(fifth) - rp) % 12) + 12) % 12;
+  if (i3 === 4 && i5 === 7) return 'major';
+  if (i3 === 3 && i5 === 7) return 'minor';
+  if (i3 === 3 && i5 === 6) return 'diminished';
+  if (i3 === 4 && i5 === 8) return 'augmented';
+  if (i3 === 2 && i5 === 7) return 'sus2';
+  if (i3 === 5 && i5 === 7) return 'sus4';
+  return 'unknown';
+}
+
+/** Classify a seventh chord from four notes. */
+function classifySeventh(notes) {
+  const triadQ = classifyTriad(notes.slice(0, 3));
+  const r = typeof notes[0] === 'string' ? parseNote(notes[0]) : notes[0];
+  const seventh = typeof notes[3] === 'string' ? parseNote(notes[3]) : notes[3];
+  const i7 = (((pitchClass(seventh) - pitchClass(r)) % 12) + 12) % 12;
+  if (triadQ === 'major' && i7 === 11) return 'major7';
+  if (triadQ === 'major' && i7 === 10) return 'dominant7';
+  if (triadQ === 'minor' && i7 === 10) return 'minor7';
+  if (triadQ === 'minor' && i7 === 11) return 'minor-major7';
+  if (triadQ === 'diminished' && i7 === 10) return 'half_diminished7';
+  if (triadQ === 'diminished' && i7 === 9) return 'diminished7';
+  return 'unknown';
+}
+
+
+// ===== src/theory/RomanNumeralEngine.js =====
+// RomanNumeralEngine.js
+// Parses a roman-numeral token and spells the actual chord in a given key.
+// Deterministic: the code decides root + quality, never an LLM.
+
+const DEGREE_BY_ROMAN = { I: 0, II: 1, III: 2, IV: 3, V: 4, VI: 5, VII: 6 };
+
+// Ordered longest-first so "vii" matches before "v", "iii" before "ii"/"i", etc.
+const ROMAN_TOKENS = ['VII', 'III', 'VI', 'IV', 'II', 'V', 'I'];
+
+/**
+ * Parse a roman numeral like: I, vi, ii°, V7, viiø7, bVII, iv, V/vi, V7/V.
+ * Returns { flats, sharps, romanUpper, isLower, qualityHint, applied }.
+ */
+function parseRoman(input) {
+  let s = input.trim();
+  let applied = null;
+  const slash = s.indexOf('/');
+  if (slash !== -1) {
+    applied = s.slice(slash + 1);
+    s = s.slice(0, slash);
+  }
+
+  let flats = 0, sharps = 0;
+  while (s[0] === 'b' || s[0] === '♭') { flats++; s = s.slice(1); }
+  while (s[0] === '#' || s[0] === '♯') { sharps++; s = s.slice(1); }
+
+  // Find the roman-letter core (case-insensitive), longest match first.
+  let romanUpper = null, isLower = false, rest = '';
+  const up = s.toUpperCase();
+  for (const tok of ROMAN_TOKENS) {
+    if (up.startsWith(tok)) {
+      romanUpper = tok;
+      isLower = s[0] === s[0].toLowerCase() && s[0] !== s[0].toUpperCase();
+      rest = s.slice(tok.length);
+      break;
+    }
+  }
+  if (romanUpper === null) throw new Error(`Cannot parse roman numeral: "${input}"`);
+
+  return { flats, sharps, romanUpper, isLower, qualityHint: rest, applied };
+}
+
+// Map the trailing symbols + case to a chord quality.
+function qualityFrom(isLower, hint) {
+  const h = hint.replace(/\s+/g, '');
+  if (h === '°7' || h === 'o7' || h === 'dim7') return 'diminished7';
+  if (h === 'ø7' || h === 'm7b5') return 'half_diminished7';
+  if (h === '°' || h === 'o' || h === 'dim') return 'diminished';
+  if (h === '+' || h === 'aug') return 'augmented';
+  if (h === 'maj7' || h === 'M7') return 'major7';
+  if (h === '7') return isLower ? 'minor7' : 'dominant7';
+  if (h === 'sus4') return 'sus4';
+  if (h === 'sus2') return 'sus2';
+  if (h === '') return isLower ? 'minor' : 'major';
+  // default: keep triad quality by case
+  return isLower ? 'minor' : 'major';
+}
+
+/** Root note for a diatonic degree in a key (before any b/# alteration). */
+function diatonicRoot(keyTonic, mode, degreeIndex) {
+  const scaleName = mode === 'minor' ? 'natural_minor' : 'major';
+  return buildScaleNotes(keyTonic, scaleName)[degreeIndex];
+}
+
+function applyChromatic(rootNote, flats, sharps) {
+  return { letter: rootNote.letter, accidental: rootNote.accidental - flats + sharps };
+}
+
+/**
+ * Spell the chord for a roman numeral in a key.
+ * key = { tonic: 'C', mode: 'major'|'minor' }.
+ * Returns the ChordEngine chord object plus { roman, appliedTarget }.
+ */
+function romanToChord(input, key) {
+  const p = parseRoman(input);
+
+  // Applied / secondary chord: build the chord as the dominant (or requested
+  // quality) of its target, so V/vi in C -> E major (a P5 above the vi root A).
+  if (p.applied) {
+    const target = parseRoman(p.applied);
+    const targetDegree = DEGREE_BY_ROMAN[target.romanUpper];
+    let targetRoot = diatonicRoot(key.tonic, key.mode, targetDegree);
+    targetRoot = applyChromatic(targetRoot, target.flats, target.sharps);
+    // Root of the applied chord = perfect fifth above the target root.
+    const appliedRoot = spellFrom(targetRoot, 4, 7);
+    const quality = qualityFrom(p.isLower, p.qualityHint) === 'major' && p.qualityHint === '7'
+      ? 'dominant7'
+      : qualityFrom(p.isLower, p.qualityHint);
+    const chord = buildChord(noteToString(appliedRoot), p.qualityHint.includes('7') ? 'dominant7' : quality);
+    return { ...chord, roman: input, appliedTarget: noteToString(targetRoot) };
+  }
+
+  const degreeIndex = DEGREE_BY_ROMAN[p.romanUpper];
+  let root = diatonicRoot(key.tonic, key.mode, degreeIndex);
+  root = applyChromatic(root, p.flats, p.sharps);
+  const quality = qualityFrom(p.isLower, p.qualityHint);
+  const chord = buildChord(noteToString(root), quality);
+  return { ...chord, roman: input, appliedTarget: null };
+}
+
+/** Spell an entire progression given as roman numerals. */
+function progressionToChords(romans, key) {
+  return romans.map((r) => romanToChord(r, key));
+}
+
+
+// ===== src/model/provenance.js =====
+// provenance.js
+// Every piece of content in a song carries where it came from. This is a product
+// feature, not bookkeeping: the writer can always see what is theirs versus what
+// was suggested, and the app can never silently merge AI text into user text.
+
+const PROVENANCE = Object.freeze({
+  USER: 'USER',
+  AI_SUGGESTION: 'AI_SUGGESTION',
+  SYSTEM_ANALYSIS: 'SYSTEM_ANALYSIS',
+  THEORY_ENGINE: 'THEORY_ENGINE',
+});
+
+const VALID = new Set(Object.values(PROVENANCE));
+
+let _counter = 0;
+function nextId() {
+  _counter += 1;
+  return `frag_${Date.now().toString(36)}_${_counter}`;
+}
+
+/**
+ * Create a content fragment. `history` records prior versions so a replacement
+ * is always reversible.
+ */
+function createFragment(text, provenance, meta = {}) {
+  if (!VALID.has(provenance)) throw new Error(`Invalid provenance: ${provenance}`);
+  return {
+    id: nextId(),
+    text,
+    provenance,
+    meta,
+    createdAt: new Date().toISOString(),
+    history: [],
+  };
+}
+
+/**
+ * Replace a fragment's text. USER-authored text is protected: it can only be
+ * replaced when the caller explicitly passes { intent: 'user_confirmed' }, which
+ * models an explicit user action in the UI. Any replacement is reversible via
+ * history. The function returns a NEW fragment object (immutable update).
+ */
+function replaceText(fragment, newText, newProvenance, opts = {}) {
+  if (!VALID.has(newProvenance)) throw new Error(`Invalid provenance: ${newProvenance}`);
+  if (fragment.provenance === PROVENANCE.USER && opts.intent !== 'user_confirmed') {
+    throw new Error(
+      'Refusing to overwrite USER-authored text without an explicit user_confirmed intent.'
+    );
+  }
+  return {
+    ...fragment,
+    text: newText,
+    provenance: newProvenance,
+    history: [
+      ...fragment.history,
+      { text: fragment.text, provenance: fragment.provenance, at: fragment.createdAt },
+    ],
+    createdAt: new Date().toISOString(),
+  };
+}
+
+/** Revert a fragment to its most recent historical version. */
+function revert(fragment) {
+  if (fragment.history.length === 0) return fragment;
+  const prev = fragment.history[fragment.history.length - 1];
+  return {
+    ...fragment,
+    text: prev.text,
+    provenance: prev.provenance,
+    history: fragment.history.slice(0, -1),
+    createdAt: new Date().toISOString(),
+  };
+}
+
+/** Convenience factories for engine/system output, which are always tagged. */
+const asTheoryEngine = (text, meta) => createFragment(text, PROVENANCE.THEORY_ENGINE, meta);
+const asSystemAnalysis = (text, meta) => createFragment(text, PROVENANCE.SYSTEM_ANALYSIS, meta);
+const asAiSuggestion = (text, meta) => createFragment(text, PROVENANCE.AI_SUGGESTION, meta);
+const asUser = (text, meta) => createFragment(text, PROVENANCE.USER, meta);
+
+
+// ===== src/model/projectState.js =====
+// projectState.js
+// The serializable state of one song project. Local-first: this whole object is
+// what gets persisted (and is exportable/deletable). It deliberately stores only
+// what the writer supplied plus tagged suggestions — no inferred meaning, no
+// automatic truth scores.
+
+
+const SCHEMA_VERSION = 3;
+
+let _projSeq = 0;
+function newProjectId() {
+  _projSeq += 1;
+  const rand = Math.random().toString(36).slice(2, 8);
+  return `proj_${Date.now().toString(36)}_${_projSeq}_${rand}`;
+}
+
+function createProject({ title = 'Untitled', tonalCenter = null } = {}) {
+  return {
+    schemaVersion: SCHEMA_VERSION,
+    id: newProjectId(),
+    title,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    // Sections hold ordered lyric fragments and an optional harmonic plan.
+    sections: [],
+    // Loose raw material captured during discovery, before it becomes lyric.
+    rawMaterial: [],
+    // Harmonic auditions the writer has selected as "closer to what I mean".
+    selectedCandidates: [],
+    // Open discovery questions the writer has not answered. Context only.
+    openQuestions: [],
+    // Discovery session progress, so a returning writer resumes where they left off.
+    discovery: null,
+    // Named snapshots of prior states. The writer's history is never silently lost.
+    versions: [],
+    // Chosen song structure (from structure_recipes), if the writer picked one.
+    structure: null,
+    // Performance notes for handoff: tempo (BPM) and feel, set by the writer.
+    meta: { tempo: null, feel: null },
+    settings: {
+      tonalCenter,
+      listenBlind: false,
+      interventionMode: 'coach', // coach | help | collaborate | rescue
+      agePosture: '13+',
+    },
+  };
+}
+
+function touch(project) {
+  project.updatedAt = new Date().toISOString();
+  return project;
+}
+
+function addSection(project, { name, goal = null, role = null, structureRule = null } = {}) {
+  const section = {
+    id: `sec_${project.sections.length + 1}`,
+    name,
+    role,                 // structural role, e.g. "Verse 2" (from a structure recipe)
+    goal,                 // e.g. "verse advances the story" — the writer's own words
+    structureRule: structureRule, // the recipe's rule for this form, as guidance
+    fragments: [],        // provenance-tagged fragments
+    experiments: [],      // craft experiments the writer has opted into
+    harmonicPlan: null,   // { grammar, tonalCenter, romanNumerals, relationToWords }
+    truthRating: null,    // 1-5, ONLY ever set by the user
+  };
+  project.sections.push(section);
+  touch(project);
+  return section;
+}
+
+function addFragment(project, sectionId, fragment) {
+  const section = project.sections.find((s) => s.id === sectionId);
+  if (!section) throw new Error(`No section ${sectionId}`);
+  section.fragments.push(fragment);
+  touch(project);
+  return section;
+}
+
+/**
+ * Truth ratings are self-report only. This helper refuses any attempt to set a
+ * rating without an explicit user source, enforcing ui_copy's "never score truth
+ * automatically" rule at the data layer.
+ */
+function setTruthRating(project, sectionId, rating, source) {
+  if (source !== 'user') {
+    throw new Error('Truth ratings may only be set by the user.');
+  }
+  if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+    throw new Error('Truth rating must be an integer 1-5.');
+  }
+  const section = project.sections.find((s) => s.id === sectionId);
+  if (!section) throw new Error(`No section ${sectionId}`);
+  section.truthRating = rating;
+  touch(project);
+  return section;
+}
+
+/** Attach a harmonic plan to a section (from an audition the writer chose). */
+function setHarmonicPlan(project, sectionId, plan) {
+  const section = project.sections.find((s) => s.id === sectionId);
+  if (!section) throw new Error(`No section ${sectionId}`);
+  const REQUIRED = ['grammar', 'tonalCenter', 'romanNumerals'];
+  for (const k of REQUIRED) {
+    if (!(k in plan)) throw new Error(`Harmonic plan missing "${k}"`);
+  }
+  section.harmonicPlan = { relationToWords: 'ambiguous', ...plan };
+  touch(project);
+  return section;
+}
+
+/**
+ * Capture a raw discovery entry. Raw material is always the writer's own words,
+ * so it is tagged USER; `questionId` records which prompt drew it out (the start
+ * of the source trace that Phase 3's truth system builds on). The entry must be
+ * a USER-provenance fragment.
+ */
+function addRawMaterial(project, entry) {
+  if (entry.provenance !== PROVENANCE.USER) {
+    throw new Error('Raw material must be USER-authored.');
+  }
+  project.rawMaterial.push(entry);
+  touch(project);
+  return entry;
+}
+
+/** Store discovery-session progress on the project so it survives save/reload. */
+function setDiscoverySession(project, session) {
+  project.discovery = session;
+  touch(project);
+  return session;
+}
+
+/** Find a fragment anywhere in the project's sections. */
+/**
+ * Record the writer's answer to "does this harmony/lyric relationship feel true?".
+ * This is meaning, so it is the writer's alone — the helper refuses any non-user
+ * source, and the app never decides it for them.
+ */
+function setRelationshipFeedback(project, sectionId, feedback, source) {
+  if (source !== 'user') throw new Error('Relationship feedback may only be set by the user.');
+  const section = project.sections.find((s) => s.id === sectionId);
+  if (!section) throw new Error(`No section ${sectionId}`);
+  section.relationshipFeedback = {
+    feelsTrue: feedback.feelsTrue ?? null, // true | false | null
+    note: feedback.note ?? null,
+    at: new Date().toISOString(),
+  };
+  touch(project);
+  return section.relationshipFeedback;
+}
+
+/** Set performance notes for handoff (tempo in BPM, feel description). */
+function setSongMeta(project, { tempo, feel } = {}) {
+  if (!project.meta) project.meta = { tempo: null, feel: null };
+  if (tempo !== undefined) project.meta.tempo = tempo;
+  if (feel !== undefined) project.meta.feel = feel;
+  touch(project);
+  return project.meta;
+}
+
+/** Record the chosen song structure (from a structure recipe). */
+function setStructure(project, structure) {
+  project.structure = structure;
+  touch(project);
+  return structure;
+}
+
+/** Set a section's goal. The goal is the writer's own intention, in their words. */
+function setSectionGoal(project, sectionId, goal) {
+  const section = project.sections.find((s) => s.id === sectionId);
+  if (!section) throw new Error(`No section ${sectionId}`);
+  section.goal = goal;
+  touch(project);
+  return section;
+}
+
+/**
+ * Attach a craft experiment the writer has opted into. An experiment records the
+ * craft move being tried; it never generates lyric text (that stays the writer's,
+ * or a Phase 6 tagged suggestion). Non-destructive.
+ */
+function addSectionExperiment(project, sectionId, experiment) {
+  const section = project.sections.find((s) => s.id === sectionId);
+  if (!section) throw new Error(`No section ${sectionId}`);
+  if (!Array.isArray(section.experiments)) section.experiments = [];
+  section.experiments.push(experiment);
+  touch(project);
+  return experiment;
+}
+
+function findFragment(project, fragmentId) {
+  for (const section of project.sections) {
+    const index = section.fragments.findIndex((f) => f.id === fragmentId);
+    if (index !== -1) return { section, fragment: section.fragments[index], index };
+  }
+  return null;
+}
+
+/**
+ * Promote a piece of raw material into a workable fragment in a section. The
+ * fragment keeps a source reference back to the raw entry (and through it, the
+ * discovery question) so "where did this line come from?" is always answerable.
+ * Extraction is non-destructive: the raw entry stays on the board. An optional
+ * `span` selects a substring of the raw text; the extracted words are the
+ * writer's own, so the fragment is USER-authored.
+ */
+function extractFragment(project, { rawMaterialId, sectionId, span = null, note = null }) {
+  const raw = project.rawMaterial.find((r) => r.id === rawMaterialId);
+  if (!raw) throw new Error(`No raw material ${rawMaterialId}`);
+  let text = raw.text;
+  if (span) {
+    const [a, b] = span;
+    if (!Number.isInteger(a) || !Number.isInteger(b) || a < 0 || b > raw.text.length || a >= b) {
+      throw new Error('Invalid span for extraction.');
+    }
+    text = raw.text.slice(a, b);
+  }
+  const fragment = asUser(text, {
+    source: { type: 'raw_material', rawMaterialId, questionId: raw.meta?.questionId ?? null, span },
+    note,
+  });
+  addFragment(project, sectionId, fragment); // touches the project
+  return fragment;
+}
+
+/**
+ * Set a fragment's truth rating. Like section ratings, this is self-report only
+ * and refuses any non-user source, so nothing in the app ever scores truth for
+ * the writer.
+ */
+function setFragmentTruth(project, fragmentId, rating, source) {
+  if (source !== 'user') throw new Error('Truth ratings may only be set by the user.');
+  if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+    throw new Error('Truth rating must be an integer 1-5.');
+  }
+  const found = findFragment(project, fragmentId);
+  if (!found) throw new Error(`No fragment ${fragmentId}`);
+  found.fragment.truthRating = rating;
+  touch(project);
+  return found.fragment;
+}
+
+/**
+ * Replace a fragment's text, routing through the provenance guard: USER text can
+ * only be overwritten with an explicit user_confirmed intent, so AI or system
+ * changes can never silently replace the writer's words. A text change also
+ * clears any truth rating, because that self-report was about the old words.
+ */
+function replaceFragmentText(project, fragmentId, newText, provenance = PROVENANCE.USER, opts = {}) {
+  const found = findFragment(project, fragmentId);
+  if (!found) throw new Error(`No fragment ${fragmentId}`);
+  const updated = replaceText(found.fragment, newText, provenance, opts);
+  if ('truthRating' in found.fragment) updated.truthRating = null;
+  found.section.fragments[found.index] = updated;
+  touch(project);
+  return updated;
+}
+
+/** Revert a fragment to its previous version. */
+function revertFragmentById(project, fragmentId) {
+  const found = findFragment(project, fragmentId);
+  if (!found) throw new Error(`No fragment ${fragmentId}`);
+  const reverted = revert(found.fragment);
+  found.section.fragments[found.index] = reverted;
+  touch(project);
+  return reverted;
+}
+
+let _snapSeq = 0;
+/** Save a named snapshot of the current state (minus the snapshot list itself). */
+function createSnapshot(project, label = null) {
+  _snapSeq += 1;
+  const { versions, ...rest } = project;
+  const snapshot = {
+    id: `ver_${Date.now().toString(36)}_${_snapSeq}`,
+    label,
+    at: new Date().toISOString(),
+    state: JSON.parse(JSON.stringify(rest)),
+  };
+  project.versions.push(snapshot);
+  touch(project);
+  return snapshot;
+}
+
+/**
+ * Restore a snapshot. The current state is snapshotted first, so restoring never
+ * throws away the writer's latest work — they can always come back.
+ */
+function restoreSnapshot(project, snapshotId) {
+  const snap = project.versions.find((v) => v.id === snapshotId);
+  if (!snap) throw new Error(`No version ${snapshotId}`);
+  createSnapshot(project, 'auto: state before restore');
+  const restored = JSON.parse(JSON.stringify(snap.state));
+  const keptVersions = project.versions;
+  for (const key of Object.keys(project)) {
+    if (key === 'versions') continue;
+    delete project[key];
+  }
+  Object.assign(project, restored);
+  project.versions = keptVersions;
+  project.schemaVersion = SCHEMA_VERSION;
+  touch(project);
+  return project;
+}
+
+/** Bring an older saved project up to the current schema (additive only). */
+function migrateProject(obj) {
+  if (!obj || typeof obj !== 'object') return obj;
+  const o = { ...obj };
+  if (!Array.isArray(o.versions)) o.versions = [];
+  if (!o.meta) o.meta = { tempo: null, feel: null };
+  if (o.schemaVersion < SCHEMA_VERSION) o.schemaVersion = SCHEMA_VERSION;
+  return o;
+}
+
+function serialize(project) {
+  return JSON.stringify(project);
+}
+
+function deserialize(json) {
+  const obj = typeof json === 'string' ? JSON.parse(json) : json;
+  const migrated = migrateProject(obj);
+  const errors = validateProject(migrated);
+  if (errors.length) throw new Error(`Invalid project: ${errors.join('; ')}`);
+  return migrated;
+}
+
+/** Structural validation of a project object. Returns an array of error strings. */
+function validateProject(p) {
+  const errors = [];
+  if (!p || typeof p !== 'object') return ['project is not an object'];
+  if (p.schemaVersion !== SCHEMA_VERSION) errors.push(`schemaVersion must be ${SCHEMA_VERSION}`);
+  if (typeof p.title !== 'string') errors.push('title must be a string');
+  if (!Array.isArray(p.rawMaterial)) errors.push('rawMaterial must be an array');
+  else for (const r of p.rawMaterial) {
+    if (r.provenance !== PROVENANCE.USER) {
+      errors.push(`raw material ${r.id} must be USER-authored (got ${r.provenance})`);
+    }
+  }
+  if (!Array.isArray(p.versions)) errors.push('versions must be an array');
+  if (!Array.isArray(p.sections)) errors.push('sections must be an array');
+  else {
+    for (const s of p.sections) {
+      if (s.truthRating !== null && !(Number.isInteger(s.truthRating) && s.truthRating >= 1 && s.truthRating <= 5)) {
+        errors.push(`section ${s.id}: truthRating must be null or 1-5`);
+      }
+      if (!Array.isArray(s.fragments)) errors.push(`section ${s.id}: fragments must be an array`);
+      else for (const f of s.fragments) {
+        if (!Object.values(PROVENANCE).includes(f.provenance)) {
+          errors.push(`section ${s.id}: fragment ${f.id} has invalid provenance ${f.provenance}`);
+        }
+        if ('truthRating' in f && f.truthRating != null
+          && !(Number.isInteger(f.truthRating) && f.truthRating >= 1 && f.truthRating <= 5)) {
+          errors.push(`section ${s.id}: fragment ${f.id} truthRating must be null or 1-5`);
+        }
+      }
+    }
+  }
+  return errors;
+}
+
+
+// ===== src/sound/intent.js =====
+// intent.js — the MusicalIntent object. These are the dials the writer sets in
+// the Sound Room. Every one describes what the music should DO; none of them is
+// an emotion. The engine translates these into musical parameters.
+
+const PALETTES = ['MAJOR', 'MINOR', 'MODAL', 'MIXED', 'OPEN'];
+const GRAMMARS = ['FUNCTIONAL_TONAL', 'CYCLIC_POP', 'MODAL_STATIC', 'AUTO'];
+const PROFILES = [
+  'SETTLE', 'BUILD_RELEASE', 'STAY_OPEN', 'CIRCLE', 'HOLD_STILL', 'RESTLESS',
+  'BRIGHT_SURFACE_SHADOW', 'DARK_SURFACE_OPENING',
+];
+const RELATION_TO_WORDS = ['SUPPORT', 'COUNTERPOINT', 'AMBIGUOUS'];
+const TEXTURES = ['block', 'pad', 'arpeggio'];
+
+const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
+const clampInt = (n, lo, hi) => clamp(Math.round(n), lo, hi);
+
+/** Build a normalized MusicalIntent from a partial set of writer choices. */
+function createIntent(partial = {}) {
+  const palette = PALETTES.includes(partial.palette) ? partial.palette : 'OPEN';
+  return {
+    tonalCenter: partial.tonalCenter || 'C',
+    palette,
+    grammar: GRAMMARS.includes(partial.grammar) ? partial.grammar : 'AUTO',
+    profile: PROFILES.includes(partial.profile) ? partial.profile : 'SETTLE',
+    complexity: clampInt(partial.complexity ?? 1, 1, 5),
+    chromaticColor: clampInt(partial.chromaticColor ?? 0, 0, 100),
+    harmonicMotion: clampInt(partial.harmonicMotion ?? 50, 0, 100),
+    resolution: clampInt(partial.resolution ?? 50, 0, 100),
+    relationToWords: RELATION_TO_WORDS.includes(partial.relationToWords)
+      ? partial.relationToWords : 'AMBIGUOUS',
+    tempo: clampInt(partial.tempo ?? 84, 40, 200),
+    playbackTexture: TEXTURES.includes(partial.playbackTexture) ? partial.playbackTexture : 'pad',
+  };
+}
+
+/** The mode implied by a palette (the engine works in major/minor tonics). */
+function modeForPalette(palette) {
+  return palette === 'MINOR' ? 'minor' : 'major';
+}
+
+
+// ===== src/sound/ProgressionEngine.js =====
+// ProgressionEngine.js
+// Generates a roman-numeral skeleton from constraints (grammar, profile,
+// palette, complexity, color) and spells it. It generates from templates plus
+// deterministic modifiers — never from an LLM completion. Given the same intent
+// it produces the same progression (reproducible by construction).
+
+// Skeletons are grouped by SHAPE, not by emotion. Each shape has a major and a
+// minor form. The engine picks a shape from the profile and a grammar, then
+// applies complexity/color modifiers.
+const SHAPES = {
+  ARRIVE: { major: ['I', 'IV', 'V', 'I'], minor: ['i', 'iv', 'V', 'i'], cadence: 'authentic' },
+  BUILD: { major: ['I', 'vi', 'IV', 'V', 'I'], minor: ['i', 'VI', 'iv', 'V', 'i'], cadence: 'authentic' },
+  OPEN: { major: ['I', 'IV', 'ii', 'V'], minor: ['i', 'iv', 'ii°', 'V'], cadence: 'half' },
+  LOOP: { major: ['I', 'V', 'vi', 'IV'], minor: ['i', 'VI', 'III', 'VII'], cadence: 'none' },
+  STATIC: { major: ['I', 'bVII', 'IV', 'I'], minor: ['i', 'VII', 'i', 'VII'], cadence: 'none' },
+};
+
+// Profile -> default shape.
+const PROFILE_SHAPE = {
+  SETTLE: 'ARRIVE',
+  BUILD_RELEASE: 'BUILD',
+  STAY_OPEN: 'OPEN',
+  CIRCLE: 'LOOP',
+  HOLD_STILL: 'STATIC',
+  RESTLESS: 'BUILD',
+  BRIGHT_SURFACE_SHADOW: 'ARRIVE',
+  DARK_SURFACE_OPENING: 'ARRIVE',
+};
+
+// Which shapes each grammar can host.
+const GRAMMAR_SHAPES = {
+  FUNCTIONAL_TONAL: ['ARRIVE', 'BUILD', 'OPEN'],
+  CYCLIC_POP: ['LOOP'],
+  MODAL_STATIC: ['STATIC'],
+};
+
+/** Resolve AUTO to a concrete grammar based on the profile's shape. */
+function resolveGrammar(intent) {
+  if (intent.grammar !== 'AUTO') return intent.grammar;
+  const shape = PROFILE_SHAPE[intent.profile] || 'ARRIVE';
+  if (shape === 'LOOP') return 'CYCLIC_POP';
+  if (shape === 'STATIC') return 'MODAL_STATIC';
+  return 'FUNCTIONAL_TONAL';
+}
+
+// Pick a shape that both the grammar allows and the profile suggests.
+function pickShape(grammar, profile) {
+  const allowed = GRAMMAR_SHAPES[grammar];
+  const wanted = PROFILE_SHAPE[profile] || 'ARRIVE';
+  if (allowed.includes(wanted)) return wanted;
+  return allowed[0];
+}
+
+// Add a seventh to a plain roman token (leaves already-extended tokens alone).
+function addSeventh(roman) {
+  if (/7|°|ø|maj/.test(roman)) return roman;
+  if (roman === 'V') return 'V7';
+  if (/^[IV]+$/.test(roman)) return `${roman}maj7`; // major diatonic -> maj7
+  return `${roman}7`; // minor/other -> plain 7 (parsed as minor7 by case)
+}
+
+/**
+ * Apply complexity (1-5) and chromatic color (0-100) to a skeleton.
+ * - complexity >= 2: seventh on the dominant
+ * - complexity >= 3: sevenths across predominant/dominant
+ * - complexity >= 4 or color >= 50: one chromatic event
+ *     (a borrowed iv before the final tonic in major, or a V/V before V)
+ * The change is deterministic and always explainable.
+ */
+function applyComplexity(romans, intent, mode, shape) {
+  let out = [...romans];
+
+  if (intent.complexity >= 3) {
+    out = out.map((r) => (r === 'V' || r === 'ii' || r === 'ii°' ? addSeventh(r) : r));
+  } else if (intent.complexity >= 2) {
+    out = out.map((r) => (r === 'V' ? 'V7' : r));
+  }
+
+  const wantChromatic = intent.complexity >= 4 || intent.chromaticColor >= 50
+    || intent.profile === 'BRIGHT_SURFACE_SHADOW';
+  if (wantChromatic && mode === 'major') {
+    const lastIdx = out.length - 1;
+    // Prefer a borrowed iv slid in before a final tonic (I ... IV iv I).
+    if (out[lastIdx] === 'I' && !out.includes('iv')) {
+      out.splice(lastIdx, 0, 'iv');
+    } else {
+      // Otherwise tonicize the dominant with a secondary dominant.
+      const vIdx = out.findIndex((r) => r === 'V' || r === 'V7');
+      if (vIdx > 0 && !out.includes('V/V')) out.splice(vIdx, 0, 'V/V');
+    }
+  }
+  return out;
+}
+
+/**
+ * Generate a single spelled progression for an intent, optionally overriding the
+ * grammar and shape (the AuditionEngine uses overrides to build A/B/C).
+ * Returns { grammar, shape, tonalCenter, mode, romanNumerals, chords }.
+ */
+function generateProgression(intent, override = {}) {
+  const grammar = override.grammar || resolveGrammar(intent);
+  const shape = override.shape || pickShape(grammar, intent.profile);
+  const mode = override.mode || modeForPalette(intent.palette);
+  const template = SHAPES[shape][mode] || SHAPES[shape].major;
+  const romans = applyComplexity(template, intent, mode, shape);
+  const key = { tonic: intent.tonalCenter, mode };
+  const chords = progressionToChords(romans, key);
+  return { grammar, shape, tonalCenter: intent.tonalCenter, mode, romanNumerals: romans, chords, cadence: SHAPES[shape].cadence };
+}
+
+
+
+// ===== src/sound/VoicingEngine.js =====
+// VoicingEngine.js
+// Turns spelled chords into playable voicings (MIDI note numbers), keeping the
+// root in the bass and moving the upper voices as little as possible from chord
+// to chord. Low voice-leading cost is a musical convenience here, never an
+// "emotional" score.
+
+const BASS_LOW = 48;   // C3
+const BASS_HIGH = 59;  // B3
+const UPPER_LOW = 60;  // C4
+const UPPER_HIGH = 79; // G5
+const UPPER_TARGET = 67; // G4, where upper voices sit when there is no previous chord
+
+// Place a pitch class as a MIDI note inside [lo, hi] nearest to `target`.
+function pcNearest(pc, target, lo, hi) {
+  let best = null;
+  for (let m = lo; m <= hi; m += 1) {
+    if (((m % 12) + 12) % 12 !== pc) continue;
+    if (best === null || Math.abs(m - target) < Math.abs(best - target)) best = m;
+  }
+  return best;
+}
+
+// Nearest MIDI for a pitch class to the closest of several previous notes.
+function pcNearestToSet(pc, prevMidis) {
+  const target = prevMidis.length
+    ? prevMidis.reduce((a, b) => a + b, 0) / prevMidis.length
+    : UPPER_TARGET;
+  let best = null;
+  for (let m = UPPER_LOW; m <= UPPER_HIGH; m += 1) {
+    if (((m % 12) + 12) % 12 !== pc) continue;
+    const d = prevMidis.length ? Math.min(...prevMidis.map((p) => Math.abs(p - m))) : Math.abs(m - target);
+    if (best === null || d < best.d) best = { m, d };
+  }
+  return best.m;
+}
+
+/**
+ * Voice a progression. Returns an array of voicings; each voicing is
+ * { bass, upper: [...], midi: [...sorted] }. Also returns the total upper-voice
+ * motion as a transparent number.
+ */
+function voiceProgression(chords) {
+  const voicings = [];
+  let prevUpper = [];
+  let totalMotion = 0;
+
+  for (const chord of chords) {
+    const pcs = chord.notes.map((n) => pitchClass(parseNote(n)));
+    const rootPc = pcs[0];
+    const bass = pcNearest(rootPc, 54, BASS_LOW, BASS_HIGH); // aim mid-bass
+    const upperPcs = pcs.slice(1);
+    const upper = [];
+    for (const pc of upperPcs) {
+      const m = pcNearestToSet(pc, prevUpper);
+      upper.push(m);
+    }
+    upper.sort((a, b) => a - b);
+
+    if (prevUpper.length) {
+      // Motion = sum of nearest-voice distances between the two upper sets.
+      for (const m of upper) {
+        totalMotion += Math.min(...prevUpper.map((p) => Math.abs(p - m)));
+      }
+    }
+    prevUpper = upper;
+    voicings.push({ bass, upper, midi: [bass, ...upper].sort((a, b) => a - b) });
+  }
+
+  return { voicings, totalMotion };
+}
+
+
+// ===== src/sound/TensionFeatureEngine.js =====
+// TensionFeatureEngine.js
+// Produces transparent, recomputable structural features for a progression. The
+// composite value is explicitly labelled "structural tension" with its components
+// disclosed. It is never renamed to an emotion — that boundary is the point.
+
+// Circle-of-fifths distance between two pitch classes (0..6).
+function cofDistance(a, b) {
+  const d = ((((b - a) * 7) % 12) + 12) % 12;
+  return Math.min(d, 12 - d);
+}
+
+const DISSONANCE = {
+  major: 0, minor: 0, sus2: 0, sus4: 0,
+  augmented: 1, diminished: 1,
+  major7: 1, dominant7: 1, minor7: 1, 'minor-major7': 1,
+  add9: 1, minor_add9: 1, major6: 0, minor6: 0,
+  half_diminished7: 2, diminished7: 2, dominant9: 1, major9: 1, minor9: 1,
+};
+
+function stripQuality(roman) {
+  return roman.replace(/(maj7|ø7|°7|°|ø|7|\+|sus2|sus4)/g, '');
+}
+
+// A chord is chromatic to the key if its roman carries an accidental/applied
+// mark, or (in major) is the borrowed minor iv.
+function isChromatic(roman, mode) {
+  if (/[b#]/.test(roman) || roman.includes('/')) return true;
+  if (mode === 'major' && /^iv$/.test(stripQuality(roman))) return true;
+  return false;
+}
+
+function classifyClosure(romans, cadence) {
+  const last = stripQuality(romans[romans.length - 1]);
+  const prev = romans.length > 1 ? stripQuality(romans[romans.length - 2]) : '';
+  const endsTonic = last === 'I' || last === 'i';
+  const endsDominant = last === 'V';
+  if (endsTonic) return 'closed';
+  if ((prev === 'V') && (last === 'vi' || last === 'VI')) return 'deceptive';
+  if (endsDominant) return 'open_half';
+  if (cadence === 'none') return 'unresolved_loop';
+  return 'open_half';
+}
+
+const OPENNESS = { closed: 0, deceptive: 0.6, open_half: 0.75, unresolved_loop: 0.5 };
+const WEIGHTS = { tonicDistance: 0.2, chromaticism: 0.25, dissonance: 0.2, openness: 0.35 };
+
+/**
+ * Compute features for a candidate that has { romanNumerals, chords, tonalCenter,
+ * mode, cadence } and an optional voicing motion number.
+ */
+function computeFeatures(candidate, voiceLeadingMotion = 0) {
+  const tonicPc = pitchClass(parseNote(candidate.tonalCenter));
+  const per = candidate.chords.map((chord, i) => {
+    const rootPc = pitchClass(parseNote(chord.root));
+    return {
+      roman: candidate.romanNumerals[i],
+      cof: cofDistance(tonicPc, rootPc),
+      chromatic: isChromatic(candidate.romanNumerals[i], candidate.mode),
+      dissonance: DISSONANCE[chord.quality] ?? 0,
+    };
+  });
+
+  const n = per.length;
+  const tonicDistanceAvg = per.reduce((s, p) => s + p.cof, 0) / n;
+  const chromaticism = per.filter((p) => p.chromatic).length / n;
+  const dissonanceAvg = per.reduce((s, p) => s + p.dissonance, 0) / n / 2; // 0..1
+  const closure = classifyClosure(candidate.romanNumerals, candidate.cadence);
+  const openness = OPENNESS[closure];
+
+  const norm = {
+    tonicDistance: tonicDistanceAvg / 6,
+    chromaticism,
+    dissonance: dissonanceAvg,
+    openness,
+  };
+  const composite =
+    norm.tonicDistance * WEIGHTS.tonicDistance +
+    norm.chromaticism * WEIGHTS.chromaticism +
+    norm.dissonance * WEIGHTS.dissonance +
+    norm.openness * WEIGHTS.openness;
+
+  return {
+    perChord: per,
+    tonicDistanceAvg: round(tonicDistanceAvg),
+    chromaticism: round(chromaticism),
+    dissonanceAvg: round(dissonanceAvg),
+    closure,
+    voiceLeadingMotion,
+    harmonicRhythm: n,
+    loop: candidate.cadence === 'none',
+    structuralTension: {
+      label: 'structural tension (composite, not an emotion)',
+      value: round(composite),
+      components: {
+        tonicDistance: round(norm.tonicDistance),
+        chromaticism: round(norm.chromaticism),
+        dissonance: round(norm.dissonance),
+        openness: round(norm.openness),
+      },
+      weights: WEIGHTS,
+    },
+  };
+}
+
+function round(x) { return Math.round(x * 1000) / 1000; }
+
+
+// ===== src/sound/ExplanationEngine.js =====
+// ExplanationEngine.js
+// Builds the WHY panel content for a candidate. Badge taxonomy:
+//   THEORY | RESEARCH | CRAFT | HYPOTHESIS | YOUR_MEANING
+// Rules enforced here:
+//  - THEORY statements are structural and recomputable from engine state.
+//  - Any emotional reading is a HYPOTHESIS, hedged and phrased as a question.
+//  - YOUR_MEANING is never answered for the writer.
+const BADGES = Object.freeze({
+  THEORY: 'THEORY', RESEARCH: 'RESEARCH', CRAFT: 'CRAFT',
+  HYPOTHESIS: 'HYPOTHESIS', YOUR_MEANING: 'YOUR_MEANING',
+});
+
+const GRAMMAR_LABEL = {
+  FUNCTIONAL_TONAL: 'functional', CYCLIC_POP: 'cyclic / pop', MODAL_STATIC: 'modal / static',
+};
+
+// Words that must never appear in a THEORY (as-fact) statement.
+const EMOTION_WORDS = /\b(happy|sad|joy|joyful|grief|griev|anger|angry|anxious|anxiety|fear|scared|depress|melanchol|nostalg|hopeful|hope|longing|yearn|heartbreak|uplifting|somber|cheerful|mournful)\b/i;
+
+const th = (statement) => ({ badge: BADGES.THEORY, statement });
+const hyp = (statement) => ({ badge: BADGES.HYPOTHESIS, statement });
+const ym = (statement) => ({ badge: BADGES.YOUR_MEANING, statement });
+
+function closureStatement(closure, lastRoman) {
+  switch (closure) {
+    case 'closed':
+      return `It ends on ${lastRoman} and returns to the tonic, so it arrives.`;
+    case 'open_half':
+      return `It ends on ${lastRoman}, which withholds a full tonic arrival.`;
+    case 'deceptive':
+      return `The dominant moves to ${lastRoman} instead of the expected tonic, deferring arrival.`;
+    case 'unresolved_loop':
+      return `The loop ends on ${lastRoman} rather than the tonic, so it keeps moving.`;
+    default:
+      return `It ends on ${lastRoman}.`;
+  }
+}
+
+function chromaticStatements(candidate) {
+  const out = [];
+  candidate.chords.forEach((chord, i) => {
+    const roman = candidate.romanNumerals[i];
+    const chromatic = /[b#]/.test(roman) || roman.includes('/')
+      || (candidate.mode === 'major' && /^iv$/.test(roman));
+    if (!chromatic) return;
+    if (chord.appliedTarget) {
+      out.push(th(`${chord.symbol} (${roman}) is a secondary dominant of ${chord.appliedTarget}.`));
+    } else {
+      const parallel = candidate.mode === 'major' ? 'minor' : 'major';
+      out.push(th(`${chord.symbol} (${roman}) is borrowed from the parallel ${parallel}.`));
+    }
+  });
+  return out;
+}
+
+function hypothesisFor(features) {
+  const c = features.closure;
+  if (features.chromaticism > 0) {
+    return hyp('That borrowed color can complicate an otherwise plainer surface — does it feel that way to you?');
+  }
+  if (c === 'closed') {
+    return hyp('A clear arrival can suit a line that lands on something certain — is that what you want here?');
+  }
+  return hyp('That withheld or delayed arrival can fit a lyric that stays unresolved — does that match what you mean?');
+}
+
+/**
+ * Explain a candidate. In blind mode, return only the listen-first prompt so no
+ * loaded labels reach the writer before they hear it.
+ */
+function explainCandidate(candidate, features, { blind = false } = {}) {
+  if (blind) {
+    return [ym('Listen first — which of these is closer to what you mean?')];
+  }
+  const lastRoman = candidate.romanNumerals[candidate.romanNumerals.length - 1];
+  const out = [
+    th(`This progression was generated as ${GRAMMAR_LABEL[candidate.grammar]} harmony.`),
+    th(closureStatement(features.closure, lastRoman)),
+    ...chromaticStatements(candidate),
+    hypothesisFor(features),
+    ym('What did you hear?'),
+    ym('Why does that matter to you?'),
+  ];
+  return out;
+}
+
+/** Explain the single change between a parent and a refined variant. */
+function explainChange(variant) {
+  return [th(`What changed: ${variant.changeNote}.`), ym('What did that do for you?')];
+}
+
+/** Guard: no THEORY statement may assert an emotion; every HYPOTHESIS must hedge. */
+function validateExplanations(explanations) {
+  const errors = [];
+  for (const e of explanations) {
+    if (e.badge === BADGES.THEORY && EMOTION_WORDS.test(e.statement)) {
+      errors.push(`THEORY states an emotion as fact: "${e.statement}"`);
+    }
+    if (e.badge === BADGES.HYPOTHESIS) {
+      const hedged = /\?$/.test(e.statement) || /\b(can|may|might|could)\b/i.test(e.statement);
+      if (!hedged) errors.push(`HYPOTHESIS is not hedged: "${e.statement}"`);
+    }
+  }
+  return errors;
+}
+
+
+// ===== src/sound/AuditionEngine.js =====
+// AuditionEngine.js
+// Orchestrates the Sound Room: build three meaningfully different candidates for
+// an intent, then, once the writer picks one, refine it by mutating just one or
+// two dimensions so the change is learnable. No LLM in this path.
+
+let _seq = 0;
+const nextCandId = () => `cand_${(_seq += 1)}`;
+
+function rotate(arr, by) {
+  const n = arr.length;
+  const k = ((by % n) + n) % n;
+  return [...arr.slice(k), ...arr.slice(0, k)];
+}
+
+function cadenceForLast(lastRoman) {
+  const bare = lastRoman.replace(/(maj7|ø7|°7|°|ø|7|\+)/g, '');
+  if (bare === 'I' || bare === 'i') return 'authentic';
+  if (bare === 'V') return 'half';
+  if (bare === 'vi' || bare === 'VI') return 'none';
+  return 'none';
+}
+
+// Assemble a full candidate from a spelled progression description.
+function assemble(prog, { blind, label = null, parentId = null, changeNote = null }) {
+  const { voicings, totalMotion } = voiceProgression(prog.chords);
+  const features = computeFeatures(prog, totalMotion);
+  const explanation = changeNote
+    ? [...explainCandidate(prog, features, { blind }), ...explainChange({ changeNote })]
+    : explainCandidate(prog, features, { blind });
+  return {
+    id: nextCandId(),
+    label,
+    parentId,
+    provenance: PROVENANCE.THEORY_ENGINE,
+    grammar: prog.grammar,
+    shape: prog.shape,
+    tonalCenter: prog.tonalCenter,
+    mode: prog.mode,
+    cadence: prog.cadence,
+    romanNumerals: prog.romanNumerals,
+    chords: prog.chords,
+    voicings,
+    structuralFeatures: features,
+    explanation,
+    changeNote,
+  };
+}
+
+// Re-spell a mutated roman list into a full prog description.
+function respell(romans, base) {
+  const key = { tonic: base.tonalCenter, mode: base.mode };
+  return {
+    grammar: base.grammar,
+    shape: base.shape,
+    tonalCenter: base.tonalCenter,
+    mode: base.mode,
+    romanNumerals: romans,
+    chords: progressionToChords(romans, key),
+    cadence: cadenceForLast(romans[romans.length - 1]),
+  };
+}
+
+/**
+ * Build three candidates for an intent.
+ * - AUTO grammar: the three archetypes — functional arrival, cyclic loop, and a
+ *   functional line carrying one borrowed/chromatic chord.
+ * - Fixed grammar: three treatments within that grammar (distinct shapes if the
+ *   grammar allows them, otherwise rotation + added color).
+ */
+function audition(intent, { blind = false } = {}) {
+  const auto = intent.grammar === 'AUTO';
+  let plans;
+  if (auto) {
+    plans = [
+      { label: 'A', override: { grammar: 'FUNCTIONAL_TONAL', shape: intent.profile === 'BUILD_RELEASE' ? 'BUILD' : 'ARRIVE' } },
+      { label: 'B', override: { grammar: 'CYCLIC_POP', shape: 'LOOP' } },
+      { label: 'C', override: { grammar: 'FUNCTIONAL_TONAL', shape: 'ARRIVE' }, colorful: true },
+    ];
+  } else {
+    const shapes = GRAMMAR_SHAPES[intent.grammar];
+    if (shapes.length >= 3) {
+      plans = [
+        { label: 'A', override: { grammar: intent.grammar, shape: shapes[0] } },
+        { label: 'B', override: { grammar: intent.grammar, shape: shapes[2] } }, // OPEN
+        { label: 'C', override: { grammar: intent.grammar, shape: shapes[0] }, colorful: true },
+      ];
+    } else {
+      plans = [
+        { label: 'A', override: { grammar: intent.grammar, shape: shapes[0] } },
+        { label: 'B', override: { grammar: intent.grammar, shape: shapes[0], rotate: 1 } },
+        { label: 'C', override: { grammar: intent.grammar, shape: shapes[0] }, colorful: true },
+      ];
+    }
+  }
+
+  const candidates = plans.map((plan) => {
+    const eff = plan.colorful ? { ...intent, chromaticColor: Math.max(intent.chromaticColor, 60) } : intent;
+    let prog = generateProgression(eff, plan.override);
+    if (plan.override.rotate) {
+      const romans = rotate(prog.romanNumerals, plan.override.rotate);
+      prog = respell(romans, prog);
+    }
+    return assemble(prog, { blind, label: plan.label });
+  });
+
+  return { candidates };
+}
+
+/**
+ * Refine a chosen candidate into three variants, each mutating ONE dimension so
+ * the writer can hear exactly what a single change does.
+ */
+function refine(parent, { blind = false } = {}) {
+  const romans = parent.romanNumerals;
+  const last = romans[romans.length - 1];
+  const bareLast = last.replace(/(maj7|ø7|°7|°|ø|7|\+)/g, '');
+  const tonic = parent.mode === 'minor' ? 'i' : 'I';
+  const dominant = parent.mode === 'minor' ? 'V' : 'V';
+  const submediant = parent.mode === 'minor' ? 'VI' : 'vi';
+
+  // V1 — stronger closure.
+  let v1Romans;
+  let v1Note;
+  if (bareLast !== tonic) {
+    v1Romans = [...romans.slice(0, -1), tonic];
+    v1Note = `ends on ${tonic} for a stronger arrival`;
+  } else {
+    v1Romans = [...romans.slice(0, -1), dominant, tonic];
+    v1Note = `adds ${dominant} before the tonic to strengthen the arrival`;
+  }
+
+  // V2 — remove chromatic color (make everything diatonic and plainer).
+  const v2Romans = romans
+    .filter((r) => !r.includes('/'))
+    .map((r) => (parent.mode === 'major' && /^iv$/.test(r) ? 'IV' : r))
+    .map((r) => r.replace(/[b#]/g, '').replace(/(maj7|ø7|°7|7)/g, ''));
+  const v2Note = 'removes the borrowed color so the surface stays plain';
+
+  // V3 — withhold arrival (end on the submediant instead of the tonic).
+  const v3Romans = [...romans.slice(0, -1), submediant];
+  const v3Note = `ends on ${submediant} to withhold the tonic arrival`;
+
+  const variants = [
+    { romans: v1Romans, note: v1Note },
+    { romans: v2Romans, note: v2Note },
+    { romans: v3Romans, note: v3Note },
+  ].map((v, i) => {
+    const prog = respell(v.romans, parent);
+    return assemble(prog, { blind, label: `${parent.label || 'X'}${i + 1}`, parentId: parent.id, changeNote: v.note });
+  });
+
+  return { parentId: parent.id, variants };
+}
+
+
+// ===== src/audio/pitch.js =====
+// pitch.js — pure audio math (no Web Audio here, so it's testable in Node).
+
+/** Equal-tempered frequency of a MIDI note (A4 = 69 = 440 Hz). */
+function midiToFreq(midi) {
+  return 440 * 2 ** ((midi - 69) / 12);
+}
+
+/**
+ * Turn a sequence of voicings into scheduled note events. Pure function: given
+ * the same inputs it returns the same schedule, so playback is reproducible.
+ * texture: 'block' | 'pad' | 'arpeggio'.
+ */
+function buildSchedule(voicings, { tempo = 84, texture = 'pad', beatsPerChord = 2 } = {}) {
+  const secondsPerBeat = 60 / tempo;
+  const chordDur = beatsPerChord * secondsPerBeat;
+  const events = [];
+
+  voicings.forEach((v, chordIndex) => {
+    const chordStart = chordIndex * chordDur;
+    const notes = v.midi;
+    if (texture === 'arpeggio') {
+      const step = (chordDur / Math.max(notes.length, 1)) * 0.85;
+      notes.forEach((midi, i) => {
+        const start = chordStart + i * step;
+        events.push({ midi, freq: midiToFreq(midi), start, duration: chordStart + chordDur - start, texture });
+      });
+    } else {
+      // block and pad share timing; the envelope differs in the AudioEngine.
+      notes.forEach((midi) => {
+        events.push({ midi, freq: midiToFreq(midi), start: chordStart, duration: chordDur, texture });
+      });
+    }
+  });
+
+  return { events, totalDuration: voicings.length * chordDur, chordDur };
+}
+
+
+// ===== src/audio/AudioEngine.js =====
+// AudioEngine.js — browser-only Web Audio playback.
+// Follows the spec's audio rules: one reusable AudioContext created on a user
+// gesture, a safe gain envelope (no clicks), neutral timbre, no copyrighted
+// samples, and previous playback is stopped before new playback starts.
+
+class AudioEngine {
+  constructor() {
+    this.ctx = null;
+    this.master = null;
+    this.active = []; // currently scheduled nodes, so we can stop them
+  }
+
+  /** Create the AudioContext. Must be called from a user gesture (click/tap). */
+  ensure() {
+    if (this.ctx) return this.ctx;
+    const Ctx = globalThis.AudioContext || globalThis.webkitAudioContext;
+    if (!Ctx) throw new Error('Web Audio is not available in this environment.');
+    this.ctx = new Ctx();
+    this.master = this.ctx.createGain();
+    this.master.gain.value = 0.9;
+    this.master.connect(this.ctx.destination);
+    return this.ctx;
+  }
+
+  /** Stop anything currently sounding, quickly but without a click. */
+  stop() {
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    for (const node of this.active) {
+      try {
+        node.gain.gain.cancelScheduledValues(now);
+        node.gain.gain.setTargetAtTime(0, now, 0.015);
+        node.osc.stop(now + 0.1);
+      } catch { /* already stopped */ }
+    }
+    this.active = [];
+  }
+
+  /**
+   * Play a candidate's voicings. Neutral timbre = a triangle oscillator through a
+   * gentle low-pass, with a short attack/soft release so chords do not click.
+   */
+  play(candidate, { tempo = 84, texture = 'pad' } = {}) {
+    this.ensure();
+    if (this.ctx.state === 'suspended') this.ctx.resume();
+    this.stop();
+
+    const { events } = buildSchedule(candidate.voicings, { tempo, texture });
+    const t0 = this.ctx.currentTime + 0.05;
+    const attack = 0.02;
+    const release = texture === 'pad' ? 0.5 : 0.12;
+
+    for (const ev of events) {
+      const osc = this.ctx.createOscillator();
+      osc.type = texture === 'block' ? 'sawtooth' : 'triangle';
+      osc.frequency.value = ev.freq;
+
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.value = 2200;
+
+      const gain = this.ctx.createGain();
+      const start = t0 + ev.start;
+      const end = start + ev.duration;
+      const peak = 0.16;
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(peak, start + attack);
+      gain.gain.setValueAtTime(peak, Math.max(start + attack, end - release));
+      gain.gain.exponentialRampToValueAtTime(0.0001, end);
+
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.master);
+      osc.start(start);
+      osc.stop(end + 0.05);
+      this.active.push({ osc, gain });
+    }
+  }
+}
+
+
+// ===== src/discovery/DiscoveryEngine.js =====
+// DiscoveryEngine.js
+// Runs the guided-discovery flow: pick an opener based on how the writer wants
+// to start, then walk categories one question at a time, never repeating.
+//
+// MEANING LOCK, enforced structurally: this engine has no method that produces
+// an answer, interpretation, or meaning. It only ever returns questions taken
+// verbatim from discovery_questions.json. It cannot diagnose because it cannot
+// generate prose at all.
+
+// How the welcome buttons map to an opening question. "have_chords" is the
+// Sound-First path (Phase 2), flagged here so the caller can route to it.
+const ENTRY_PATHS = {
+  one_sentence: { openerId: 'Q001' },
+  say_it_ugly: { openerId: 'Q006' },
+  only_a_feeling: { openerId: 'Q004' },
+  a_story: { openerId: 'Q003' },
+  a_line: { openerId: 'Q005' },
+  have_chords: { soundFirst: true },
+};
+
+// After the opener, questions advance through these categories in order, cycling.
+// truth_check is intentionally NOT auto-scheduled — it is offered on demand.
+const CATEGORY_SEQUENCE = [
+  'scene', 'senses', 'objects', 'stakes', 'dialogue', 'contradiction',
+  'perspective', 'forward_motion',
+];
+
+// A short list of bare affect words. Its ONLY use is routing: if a writer's
+// entry is just "I'm sad", the next question asks for a concrete scene instead of
+// moving on (test scenario T001). This is not diagnosis — it does not label the
+// writer or infer meaning; it just decides which neutral question comes next.
+const BARE_AFFECT = new Set([
+  'sad', 'happy', 'angry', 'mad', 'lonely', 'alone', 'scared', 'afraid', 'numb',
+  'tired', 'exhausted', 'lost', 'empty', 'fine', 'ok', 'okay', 'anxious',
+  'depressed', 'excited', 'nervous', 'hurt', 'broken', 'confused', 'overwhelmed',
+  'stressed', 'done', 'good', 'bad',
+]);
+
+function isBareAffect(text) {
+  if (typeof text !== 'string') return false;
+  const t = text
+    .toLowerCase()
+    .replace(/[.!?,]/g, '')
+    .replace(/^(i am|i'm|im|i feel|i just feel|i feel so|i am so|i'm so|so|really|just)\s+/g, '')
+    .trim();
+  return BARE_AFFECT.has(t);
+}
+
+class DiscoveryEngine {
+  constructor(questions) {
+    this.byId = new Map(questions.map((q) => [q.id, q]));
+    this.byCategory = new Map();
+    for (const q of questions) {
+      if (!this.byCategory.has(q.category)) this.byCategory.set(q.category, []);
+      this.byCategory.get(q.category).push(q);
+    }
+  }
+
+  question(id) {
+    const q = this.byId.get(id);
+    if (!q) throw new Error(`No question ${id}`);
+    return q;
+  }
+
+  /**
+   * Begin a session. Returns { session, question } — or { session, soundFirst:true }
+   * for the "I have chords" path, which the caller routes to the Sound Room.
+   */
+  start(entryPath = 'one_sentence') {
+    const route = ENTRY_PATHS[entryPath] ?? ENTRY_PATHS.one_sentence;
+    const session = {
+      entryPath,
+      askedIds: [],
+      categoryIndex: 0,
+      done: false,
+    };
+    if (route.soundFirst) return { session, soundFirst: true };
+    const question = this.question(route.openerId);
+    session.askedIds.push(question.id);
+    return { session, question };
+  }
+
+  // First unused question in a category, or null if the category is exhausted.
+  _firstUnused(category, askedIds) {
+    const pool = this.byCategory.get(category) || [];
+    return pool.find((q) => !askedIds.includes(q.id)) || null;
+  }
+
+  /**
+   * Advance the session. `lastAnswerText` is what the writer just wrote in
+   * response to the previous question; it is used ONLY to decide the next
+   * question's category (see isBareAffect). Returns { session, question } or
+   * { session, question: null } when discovery has run out of scheduled prompts.
+   */
+  next(session, lastAnswerText = '') {
+    const asked = session.askedIds;
+
+    // T001: a bare-affect answer routes to a concrete scene question next,
+    // without advancing the normal category pointer.
+    if (isBareAffect(lastAnswerText)) {
+      const sceneQ = this._firstUnused('scene', asked);
+      if (sceneQ) {
+        const s = { ...session, askedIds: [...asked, sceneQ.id] };
+        return { session: s, question: sceneQ };
+      }
+    }
+
+    // Walk the category sequence from the current pointer, picking the first
+    // category that still has an unused question.
+    let idx = session.categoryIndex;
+    for (let step = 0; step < CATEGORY_SEQUENCE.length; step += 1) {
+      const category = CATEGORY_SEQUENCE[idx % CATEGORY_SEQUENCE.length];
+      const q = this._firstUnused(category, asked);
+      if (q) {
+        const s = {
+          ...session,
+          askedIds: [...asked, q.id],
+          categoryIndex: (idx + 1) % CATEGORY_SEQUENCE.length,
+        };
+        return { session: s, question: q };
+      }
+      idx += 1;
+    }
+
+    // Everything scheduled has been asked. Discovery does not force more.
+    return { session: { ...session, done: true }, question: null };
+  }
+
+  /** Offer a truth-check question on demand (never auto-scheduled). */
+  truthCheck(session) {
+    const q = this._firstUnused('truth_check', session.askedIds);
+    if (!q) return { session, question: null };
+    return { session: { ...session, askedIds: [...session.askedIds, q.id] }, question: q };
+  }
+}
+
+
+// ===== src/discovery/session.js =====
+// session.js — the facade the UI calls to run a discovery session.
+// Each answer is captured as USER raw material, linked to the question that drew
+// it out, and the whole project (including session progress) is persisted after
+// every step so a returning writer resumes exactly where they stopped.
+
+class DiscoveryFlow {
+  constructor(engine, store) {
+    this.engine = engine;
+    this.store = store;
+  }
+
+  /** Start a new song and its discovery session. */
+  async begin({ entryPath = 'one_sentence', title = 'Untitled', tonalCenter = null } = {}) {
+    const project = createProject({ title, tonalCenter });
+    const started = this.engine.start(entryPath);
+    setDiscoverySession(project, started.session);
+    await this.store.save(project);
+    if (started.soundFirst) return { project, soundFirst: true, question: null };
+    return { project, question: started.question, soundFirst: false };
+  }
+
+  /** The question currently awaiting an answer (the most recently asked). */
+  currentQuestionId(project) {
+    const asked = project.discovery?.askedIds ?? [];
+    return asked.length ? asked[asked.length - 1] : null;
+  }
+
+  /**
+   * Record the writer's answer to the current question as raw material, then
+   * advance to the next question. Passing an empty answer is allowed (the writer
+   * may skip) — nothing is captured, but the flow still advances.
+   */
+  async submit(project, answerText) {
+    const questionId = this.currentQuestionId(project);
+    if (answerText && answerText.trim()) {
+      addRawMaterial(project, asUser(answerText.trim(), { questionId }));
+    }
+    const { session, question } = this.engine.next(project.discovery, answerText);
+    setDiscoverySession(project, session);
+    await this.store.save(project);
+    return { project, question };
+  }
+
+  /** Offer a truth-check question without capturing anything yet. */
+  async requestTruthCheck(project) {
+    const { session, question } = this.engine.truthCheck(project.discovery);
+    setDiscoverySession(project, session);
+    await this.store.save(project);
+    return { project, question };
+  }
+
+  /** Resume: load a saved project and report the question it was paused on. */
+  async resume(id) {
+    const project = await this.store.load(id);
+    if (!project) return null;
+    const questionId = this.currentQuestionId(project);
+    const question = questionId ? this.engine.question(questionId) : null;
+    return { project, question };
+  }
+}
+
+
+// ===== src/discovery/copy.js =====
+// copy.js — thin accessor over ui_copy.json. Deterministic by default (index 0)
+// so the UI is testable; pass an index to rotate through the authored variants.
+class Copy {
+  constructor(uiCopy) {
+    this.c = uiCopy;
+  }
+
+  /** Welcome screen content. Returning writers get the "still where you left it" set. */
+  welcome({ returning = false, index = 0 } = {}) {
+    const headlines = returning ? this.c.returning_session_headlines : this.c.first_visit_headlines;
+    const headline = headlines[index % headlines.length];
+    const sub = returning ? null : this.c.first_visit_subcopy[index % this.c.first_visit_subcopy.length];
+    return { returning, headline, subcopy: sub, buttons: this.buttons() };
+  }
+
+  buttons() {
+    return [...this.c.low_pressure_buttons];
+  }
+
+  microcopy(index = 0) {
+    const m = this.c.coach_microcopy;
+    return m[index % m.length];
+  }
+
+  truthMeter() {
+    return { ...this.c.truth_meter };
+  }
+
+  interventionModes() {
+    return this.c.intervention_modes.map((m) => ({ ...m }));
+  }
+
+  whyPanel() {
+    return { ...this.c.why_panel };
+  }
+
+  productVoice() {
+    return { ...this.c.product_voice };
+  }
+}
+
+// Maps a low-pressure button label to a DiscoveryEngine entry path.
+const BUTTON_TO_ENTRY_PATH = {
+  'Start with one sentence': 'one_sentence',
+  'Say it ugly': 'say_it_ugly',
+  'I only have a feeling': 'only_a_feeling',
+  'I have a story': 'a_story',
+  'I have a line': 'a_line',
+  'I have chords': 'have_chords',
+  // "Open my last song" is a navigation action, not a discovery entry path.
+};
+
+
+// ===== src/persistence/storage.js =====
+// storage.js
+// Local-first persistence. The app never depends on a server to keep a song.
+// A StorageAdapter is a tiny key/value contract; ProjectStore builds project
+// save/load/list/delete on top of whichever adapter the environment provides.
+//
+//  - MemoryStorageAdapter  : tests, ephemeral use
+//  - FileStorageAdapter    : desktop/server, one JSON file per project
+//  - BrowserLocalStorageAdapter : the web app (uses window.localStorage)
+//
+// Deletion is real deletion (test scenario T029): remove() erases the record and
+// keeps no hidden copy.
+
+
+const PREFIX = 'song:';
+
+class MemoryStorageAdapter {
+  constructor() { this.map = new Map(); }
+  async get(key) { return this.map.has(key) ? this.map.get(key) : null; }
+  async set(key, value) { this.map.set(key, value); }
+  async remove(key) { this.map.delete(key); }
+  async keys() { return [...this.map.keys()]; }
+}
+
+class FileStorageAdapter {
+  constructor(dir, fsmod, pathmod) {
+    this.dir = dir;
+    this.fs = fsmod;
+    this.path = pathmod;
+    if (!this.fs.existsSync(dir)) this.fs.mkdirSync(dir, { recursive: true });
+  }
+  _file(key) { return this.path.join(this.dir, `${encodeURIComponent(key)}.json`); }
+  async get(key) {
+    const f = this._file(key);
+    return this.fs.existsSync(f) ? this.fs.readFileSync(f, 'utf8') : null;
+  }
+  async set(key, value) { this.fs.writeFileSync(this._file(key), value); }
+  async remove(key) {
+    const f = this._file(key);
+    if (this.fs.existsSync(f)) this.fs.rmSync(f);
+  }
+  async keys() {
+    return this.fs
+      .readdirSync(this.dir)
+      .filter((n) => n.endsWith('.json'))
+      .map((n) => decodeURIComponent(n.replace(/\.json$/, '')));
+  }
+}
+
+class BrowserLocalStorageAdapter {
+  constructor(win = globalThis.window) {
+    if (!win || !win.localStorage) throw new Error('localStorage is not available here.');
+    this.ls = win.localStorage;
+  }
+  async get(key) { return this.ls.getItem(key); }
+  async set(key, value) { this.ls.setItem(key, value); }
+  async remove(key) { this.ls.removeItem(key); }
+  async keys() {
+    const out = [];
+    for (let i = 0; i < this.ls.length; i += 1) out.push(this.ls.key(i));
+    return out;
+  }
+}
+
+class ProjectStore {
+  constructor(adapter) { this.adapter = adapter; }
+
+  async save(project) {
+    const errors = validateProject(project);
+    if (errors.length) throw new Error(`Refusing to save invalid project: ${errors.join('; ')}`);
+    await this.adapter.set(PREFIX + project.id, JSON.stringify(project));
+    return project.id;
+  }
+
+  async load(id) {
+    const raw = await this.adapter.get(PREFIX + id);
+    return raw ? migrateProject(JSON.parse(raw)) : null;
+  }
+
+  /** Lightweight summaries for a "your songs" list / returning-session check. */
+  async list() {
+    const keys = (await this.adapter.keys()).filter((k) => k.startsWith(PREFIX));
+    const summaries = [];
+    for (const k of keys) {
+      const raw = await this.adapter.get(k);
+      if (!raw) continue;
+      const p = JSON.parse(raw);
+      summaries.push({ id: p.id, title: p.title, updatedAt: p.updatedAt });
+    }
+    summaries.sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1));
+    return summaries;
+  }
+
+  /** True when the writer has at least one saved project (returning session). */
+  async hasAny() {
+    return (await this.list()).length > 0;
+  }
+
+  /** Real delete — no retained copy. */
+  async remove(id) {
+    await this.adapter.remove(PREFIX + id);
+  }
+
+  /** Export one project as pretty JSON the writer can keep (data portability). */
+  async exportProject(id) {
+    const p = await this.load(id);
+    return p ? JSON.stringify(p, null, 2) : null;
+  }
+
+  /** Export every project (for a full "download my data"). */
+  async exportAll() {
+    const out = [];
+    for (const { id } of await this.list()) {
+      const p = await this.load(id);
+      if (p) out.push(p);
+    }
+    return out;
+  }
+
+  /** Delete every project. Returns how many were removed. No hidden copies remain. */
+  async clearAll() {
+    const keys = (await this.adapter.keys()).filter((k) => k.startsWith(PREFIX));
+    for (const k of keys) await this.adapter.remove(k);
+    return keys.length;
+  }
+}
+
+
+// ===== src/board/RawMaterialBoard.js =====
+// RawMaterialBoard.js
+// Read-side helpers for the Raw Material Board. The board shows the writer's
+// captured raw material and lets them see exactly what became of each piece and
+// where every fragment traces back to. No content is generated here.
+
+/** Build an id -> question lookup from the discovery_questions dataset. */
+function indexQuestions(questions) {
+  return new Map(questions.map((q) => [q.id, q]));
+}
+
+/**
+ * Trace a fragment back through its source: fragment -> raw material entry ->
+ * discovery question. Returns the whole chain, so the UI can answer "where did
+ * this line come from?" with the writer's own words and the prompt that drew
+ * them out. Returns null for fragments that were not extracted from raw material.
+ */
+function traceSource(project, fragment, questionsById = null) {
+  const src = fragment.meta?.source;
+  if (!src || src.type !== 'raw_material') return null;
+  const raw = project.rawMaterial.find((r) => r.id === src.rawMaterialId) || null;
+  const questionId = src.questionId ?? raw?.meta?.questionId ?? null;
+  const question = questionId && questionsById ? questionsById.get(questionId) : null;
+  return {
+    fragmentId: fragment.id,
+    text: fragment.text,
+    rawMaterialId: src.rawMaterialId,
+    rawText: raw?.text ?? null,
+    span: src.span ?? null,
+    questionId,
+    questionPrompt: question?.prompt ?? null,
+  };
+}
+
+/**
+ * A board view: every raw entry annotated with the fragments extracted from it
+ * and the discovery prompt that produced it. `used` is derived, never stored, so
+ * it can't drift from the fragments that actually reference the entry.
+ */
+function boardView(project, questionsById = null) {
+  const fragsByRaw = new Map();
+  for (const section of project.sections) {
+    for (const f of section.fragments) {
+      const rid = f.meta?.source?.rawMaterialId;
+      if (!rid) continue;
+      if (!fragsByRaw.has(rid)) fragsByRaw.set(rid, []);
+      fragsByRaw.get(rid).push({ fragmentId: f.id, sectionId: section.id, text: f.text });
+    }
+  }
+  return project.rawMaterial.map((r) => {
+    const extractedInto = fragsByRaw.get(r.id) || [];
+    const qid = r.meta?.questionId ?? null;
+    return {
+      rawMaterialId: r.id,
+      text: r.text,
+      questionId: qid,
+      questionPrompt: qid && questionsById ? (questionsById.get(qid)?.prompt ?? null) : null,
+      extractedInto,
+      used: extractedInto.length > 0,
+    };
+  });
+}
+
+
+// ===== src/truth/TruthSystem.js =====
+// TruthSystem.js
+// The truth system reflects the writer's OWN self-report back to them and offers
+// the relevant truth-check questions. It never scores truth, and it never calls a
+// line good or bad — the buckets use the writer's own scale labels from ui_copy.
+
+// Which truth-check questions (from discovery_questions.json) fit each situation.
+// These are offers, not verdicts.
+const TRUTH_CHECK_BY_BUCKET = {
+  hiding: ['Q065', 'Q070'],      // sounds good but isn't true / the real-life word
+  coming_through: ['Q071'],      // a prettier version that's less true?
+  exposed: ['Q066'],             // almost too honest to keep
+  unrated: ['Q072'],             // the 1-5 rating prompt itself
+};
+
+/** The 5-point self-report scale, straight from ui_copy. */
+function truthScale(uiCopy) {
+  return uiCopy?.truth_meter?.scale ?? [];
+}
+
+function labelFor(uiCopy, value) {
+  if (value == null) return null;
+  return truthScale(uiCopy).find((s) => s.value === value)?.label ?? null;
+}
+
+/**
+ * Bucket every rated and unrated fragment (and section) by the writer's own
+ * rating, attach their scale label, and offer matching truth-check prompts.
+ * buckets: hiding (1-2), coming_through (3-4), exposed (5), unrated (null).
+ */
+function truthReport(project, { uiCopy = null, questionsById = null } = {}) {
+  const items = [];
+  for (const section of project.sections) {
+    for (const f of section.fragments) {
+      const rating = 'truthRating' in f ? (f.truthRating ?? null) : null;
+      items.push({
+        kind: 'fragment', sectionId: section.id, id: f.id, text: f.text,
+        rating, label: labelFor(uiCopy, rating),
+      });
+    }
+    items.push({
+      kind: 'section', sectionId: section.id, id: section.id, text: section.name,
+      rating: section.truthRating ?? null, label: labelFor(uiCopy, section.truthRating ?? null),
+    });
+  }
+
+  const buckets = { hiding: [], coming_through: [], exposed: [], unrated: [] };
+  for (const it of items) {
+    if (it.rating == null) buckets.unrated.push(it);
+    else if (it.rating <= 2) buckets.hiding.push(it);
+    else if (it.rating <= 4) buckets.coming_through.push(it);
+    else buckets.exposed.push(it);
+  }
+
+  const prompts = {};
+  for (const [bucket, ids] of Object.entries(TRUTH_CHECK_BY_BUCKET)) {
+    prompts[bucket] = ids.map((id) => ({ id, prompt: questionsById?.get(id)?.prompt ?? null }));
+  }
+
+  return { buckets, prompts };
+}
+
+
+// ===== src/structure/StructureEngine.js =====
+// StructureEngine.js
+// Offers song structures from structure_recipes.json and, when the writer picks
+// one, builds the sections for it. The recipe's rule rides along on each section
+// as guidance the writer can follow or ignore — it is never enforced, and goals
+// remain the writer's to set.
+
+function indexStructures(recipes) {
+  return new Map(recipes.map((r) => [r.id, r]));
+}
+
+function listStructures(recipes) {
+  return recipes.map((r) => ({ id: r.id, name: r.name, form: r.form, best_for: r.best_for }));
+}
+
+/**
+ * Apply a structure recipe to a project: record the choice and create one section
+ * per form slot, carrying the slot label as the section role and the recipe's rule
+ * as guidance. Refuses to clobber existing sections unless told to replace.
+ */
+function applyStructure(project, recipes, recipeId, { replace = false } = {}) {
+  const recipe = indexStructures(recipes).get(recipeId);
+  if (!recipe) throw new Error(`No structure recipe ${recipeId}`);
+  if (project.sections.length && !replace) {
+    throw new Error('Project already has sections; pass { replace: true } to rebuild the structure.');
+  }
+  if (replace) project.sections = [];
+  setStructure(project, { recipeId: recipe.id, name: recipe.name, rule: recipe.rule, form: recipe.form });
+  const sections = recipe.form.map((label) =>
+    addSection(project, { name: label, role: label, structureRule: recipe.rule }));
+  return { structure: project.structure, sections };
+}
+
+/**
+ * Suggested goals for each section of a recipe, derived from the form label and
+ * the recipe's rule. These are OFFERS, surfaced for the writer to accept, edit, or
+ * ignore — nothing here writes a goal. (Use acceptGoal to record one.)
+ */
+function suggestGoals(recipe) {
+  return recipe.form.map((label) => ({
+    role: label,
+    suggestion: goalHint(label, recipe),
+  }));
+}
+
+function goalHint(label, recipe) {
+  const l = label.toLowerCase();
+  if (/verse\s*2|v2/.test(l)) return 'advance the story — reveal something Verse 1 did not know.';
+  if (/verse/.test(l)) return 'set the scene with concrete, specific detail.';
+  if (/pre/.test(l)) return 'change the momentum heading into the chorus.';
+  if (/final chorus|chorus/.test(l)) return 'land the central statement; let repetition earn its meaning.';
+  if (/bridge/.test(l)) return 'say the thing you were not ready to say earlier.';
+  if (/refrain/.test(l)) return 'keep it stable enough to register; let context reshape it.';
+  if (/outro|unresolved/.test(l)) return recipe.rule;
+  return recipe.rule;
+}
+
+/** Record a goal the writer accepted for a section (their intention, their words). */
+function acceptGoal(project, sectionId, goal) {
+  return setSectionGoal(project, sectionId, goal);
+}
+
+
+// ===== src/craft/CraftEngine.js =====
+// CraftEngine.js
+// Offers craft moves from craft_recipes.json as experiments the writer opts into.
+// Nothing here generates lyric text — a craft "experiment" records the move being
+// tried and its guidance; the words stay the writer's. The one thing the engine
+// does deterministically is surface title candidates from the writer's OWN
+// language (craft move C005, "Title From Speech"), never invented phrases.
+
+function indexCraft(recipes) {
+  return new Map(recipes.map((r) => [r.id, r]));
+}
+
+function listCraft(recipes) {
+  return recipes.map((r) => ({ id: r.id, name: r.name, mechanic: r.mechanic, pattern: r.pattern }));
+}
+
+/**
+ * Start a craft experiment on a section: record which move is being tried and its
+ * guidance, tagged as an opt-in experiment. No lyric is generated or altered.
+ */
+function startExperiment(project, recipes, sectionId, recipeId) {
+  const recipe = indexCraft(recipes).get(recipeId);
+  if (!recipe) throw new Error(`No craft recipe ${recipeId}`);
+  const experiment = {
+    recipeId: recipe.id,
+    name: recipe.name,
+    mechanic: recipe.mechanic,
+    why: recipe.why,
+    pattern: recipe.pattern,
+    status: 'trying',
+    startedAt: new Date().toISOString(),
+  };
+  addSectionExperiment(project, sectionId, experiment);
+  return experiment;
+}
+
+/**
+ * Title candidates drawn from the writer's own words (craft move C005). Pulls short
+ * phrases from raw material and fragments — the writer's language, never invented —
+ * so a title comes from something they already said. Returns them with their source.
+ */
+function titleCandidates(project, { minWords = 2, maxWords = 7 } = {}) {
+  const seen = new Set();
+  const out = [];
+  const consider = (text, source) => {
+    const phrase = (text || '').trim().replace(/\s+/g, ' ');
+    const words = phrase.split(' ').filter(Boolean);
+    if (words.length < minWords || words.length > maxWords) return;
+    const key = phrase.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    out.push({ text: phrase, source });
+  };
+  for (const r of project.rawMaterial) consider(r.text, { type: 'raw_material', id: r.id });
+  for (const s of project.sections) {
+    for (const f of s.fragments) consider(f.text, { type: 'fragment', id: f.id, sectionId: s.id });
+  }
+  return out;
+}
+
+
+// ===== src/craft/rhyme.js =====
+// rhyme.js
+// Deterministic rhyme helpers. IMPORTANT LIMITATION, stated plainly: this works on
+// SPELLING, not pronunciation. It has no phonetic dictionary, so it will match
+// "fine/line" but miss "tree/sea", and it can be fooled by English's irregular
+// spelling. It is a useful, transparent aid — not an authority. The UI should
+// present results as candidates, not verdicts.
+
+const VOWELS = new Set('aeiouy');
+
+function cleanWord(w) {
+  return (w || '').toLowerCase().replace(/[^a-z]/g, '');
+}
+
+/** The orthographic rime: from the last vowel to the end of the word. */
+function rime(word) {
+  const w = cleanWord(word);
+  for (let i = w.length - 1; i >= 0; i -= 1) {
+    if (VOWELS.has(w[i])) return w.slice(i);
+  }
+  return w;
+}
+
+function lastVowel(word) {
+  const w = cleanWord(word);
+  for (let i = w.length - 1; i >= 0; i -= 1) if (VOWELS.has(w[i])) return w[i];
+  return null;
+}
+
+function lastConsonant(word) {
+  const w = cleanWord(word);
+  for (let i = w.length - 1; i >= 0; i -= 1) if (!VOWELS.has(w[i])) return w[i];
+  return null;
+}
+
+/** Perfect (orthographic) rhyme: same rime, different word. */
+function perfectRhyme(a, b) {
+  const ca = cleanWord(a);
+  const cb = cleanWord(b);
+  if (!ca || !cb || ca === cb) return false;
+  return rime(a) === rime(b);
+}
+
+/**
+ * Slant rhyme: not a perfect rhyme, but sharing either the final vowel (assonance)
+ * or the final consonant (consonance).
+ */
+function slantRhyme(a, b) {
+  if (perfectRhyme(a, b)) return false;
+  const ca = cleanWord(a);
+  const cb = cleanWord(b);
+  if (!ca || !cb || ca === cb) return false;
+  return lastVowel(a) === lastVowel(b) || lastConsonant(a) === lastConsonant(b);
+}
+
+/** Group a list of words by rime; returns only the groups with 2+ members. */
+function rhymeGroups(words) {
+  const groups = new Map();
+  for (const w of words) {
+    const r = rime(w);
+    if (!r) continue;
+    if (!groups.has(r)) groups.set(r, []);
+    groups.get(r).push(w);
+  }
+  const out = [];
+  for (const [r, members] of groups) {
+    const unique = [...new Set(members.map((m) => m.toLowerCase()))];
+    if (unique.length >= 2) out.push({ rime: r, words: unique });
+  }
+  return out;
+}
+
+/** Label the end-rhyme scheme of a list of lines as A, B, C... by last-word rime. */
+function endRhymeScheme(lines) {
+  const labels = [];
+  const byRime = new Map();
+  let next = 'A';
+  for (const line of lines) {
+    const words = line.trim().split(/\s+/).filter(Boolean);
+    const last = words[words.length - 1];
+    const r = rime(last || '');
+    if (!byRime.has(r)) {
+      byRime.set(r, next);
+      next = String.fromCharCode(next.charCodeAt(0) + 1);
+    }
+    labels.push(byRime.get(r));
+  }
+  return labels;
+}
+
+
+// ===== src/craft/maps.js =====
+// maps.js
+// Repetition and "image" maps over the writer's own words. These surface patterns
+// the writer already created — repeated words, repeated phrases, and motifs that
+// recur across sections. Nothing is invented or interpreted; it is a mirror, not a
+// critic. ("Image map" here means recurring content words and where they recur —
+// the tool does not claim to understand imagery, only to show what returns.)
+
+const STOPWORDS = new Set([
+  'a', 'an', 'and', 'the', 'to', 'of', 'in', 'on', 'at', 'for', 'with', 'is', 'it',
+  'i', 'you', 'he', 'she', 'we', 'they', 'me', 'my', 'your', 'his', 'her', 'our',
+  'was', 'were', 'be', 'been', 'am', 'are', 'do', 'did', 'does', 'so', 'but', 'or',
+  'if', 'then', 'that', 'this', 'these', 'those', 'as', 'like', 'not', 'no', 'yes',
+  'up', 'down', 'out', 'into', 'over', 'under', 'just', 'still', 'all', 'can', 'will',
+  'would', 'could', 'when', 'what', 'where', 'who', 'how', 'why', 'from', 'by',
+]);
+
+function tokenize(text) {
+  return (text || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9'\s]/g, ' ')
+    .split(/\s+/)
+    .filter(Boolean);
+}
+
+function contentWords(tokens) {
+  return tokens.filter((t) => !STOPWORDS.has(t) && t.length > 1);
+}
+
+/**
+ * Repetition map for a block of lines/text: repeated content words and repeated
+ * multi-word phrases (2- and 3-grams that occur more than once).
+ */
+function repetitionMap(textOrLines) {
+  const text = Array.isArray(textOrLines) ? textOrLines.join(' \n ') : textOrLines;
+  const tokens = tokenize(text);
+
+  const wordCounts = new Map();
+  for (const w of contentWords(tokens)) wordCounts.set(w, (wordCounts.get(w) || 0) + 1);
+
+  const phraseCounts = new Map();
+  for (const n of [2, 3]) {
+    for (let i = 0; i + n <= tokens.length; i += 1) {
+      const gram = tokens.slice(i, i + n);
+      if (gram.every((t) => STOPWORDS.has(t))) continue; // skip all-stopword phrases
+      const key = gram.join(' ');
+      phraseCounts.set(key, (phraseCounts.get(key) || 0) + 1);
+    }
+  }
+
+  const words = [...wordCounts.entries()]
+    .filter(([, c]) => c >= 2)
+    .map(([word, count]) => ({ word, count }))
+    .sort((a, b) => b.count - a.count || a.word.localeCompare(b.word));
+  const phrases = [...phraseCounts.entries()]
+    .filter(([, c]) => c >= 2)
+    .map(([phrase, count]) => ({ phrase, count }))
+    .sort((a, b) => b.count - a.count || a.phrase.localeCompare(b.phrase));
+
+  return { words, phrases };
+}
+
+/**
+ * Image/motif map across a project: content words that recur in 2+ places, with
+ * where each appears. Shows the writer their own returning motifs across sections.
+ */
+function imageMap(project) {
+  const occ = new Map(); // word -> [{sectionId, fragmentId}]
+  for (const section of project.sections) {
+    for (const f of section.fragments) {
+      for (const w of new Set(contentWords(tokenize(f.text)))) {
+        if (!occ.has(w)) occ.set(w, []);
+        occ.get(w).push({ sectionId: section.id, fragmentId: f.id });
+      }
+    }
+  }
+  return [...occ.entries()]
+    .filter(([, places]) => places.length >= 2)
+    .map(([word, occurrences]) => ({ word, occurrences }))
+    .sort((a, b) => b.occurrences.length - a.occurrences.length || a.word.localeCompare(b.word));
+}
+
+
+// ===== src/workshop/HarmonyLyricWorkshop.js =====
+// HarmonyLyricWorkshop.js
+// Phase 5: link a Sound Room choice to a section as its harmonic plan, then
+// audition how that harmony sits with the words — aligned, contrasted, or
+// ambiguous. Following the emotional-language policy: the structural facts are
+// stated plainly, any emotional reading is offered only as a hypothesis, and the
+// last word ("does this feel true?") always belongs to the writer.
+
+const RELATIONS = ['aligned', 'contrasted', 'ambiguous'];
+
+function indexContrast(recipes) {
+  return new Map(recipes.map((r) => [r.id, r]));
+}
+
+const wTh = (statement) => ({ badge: BADGES.THEORY, statement });
+const wHyp = (statement) => ({ badge: BADGES.HYPOTHESIS, statement });
+const wYm = (statement) => ({ badge: BADGES.YOUR_MEANING, statement });
+
+/**
+ * Link a chosen Sound Room candidate to a section as its harmonic plan, recording
+ * how the writer wants it to relate to the words. Carries a small structural
+ * summary so the relationship can be explained later without recomputing.
+ */
+function attachPlan(project, sectionId, candidate, relation = 'ambiguous') {
+  if (!RELATIONS.includes(relation)) throw new Error(`Unknown relation "${relation}"`);
+  const f = candidate.structuralFeatures || {};
+  const plan = {
+    grammar: candidate.grammar,
+    tonalCenter: candidate.tonalCenter,
+    romanNumerals: candidate.romanNumerals,
+    relationToWords: relation,
+    sourceCandidateId: candidate.id,
+    mode: candidate.mode,
+    closure: f.closure ?? null,
+    chromaticism: f.chromaticism ?? 0,
+  };
+  return setHarmonicPlan(project, sectionId, plan);
+}
+
+function closurePhrase(closure) {
+  switch (closure) {
+    case 'closed': return 'arrives on the tonic';
+    case 'open_half': return 'withholds a full tonic arrival';
+    case 'deceptive': return 'moves deceptively instead of resolving';
+    case 'unresolved_loop': return 'loops without resolving';
+    default: return 'moves through its chords';
+  }
+}
+
+const RELATION_HYPOTHESIS = {
+  aligned: 'Set to align, the music can move with the words rather than against them.',
+  contrasted: "Set to contrast, the music can pull against the words, so one says something the other doesn't.",
+  ambiguous: 'Left ambiguous, the music can avoid committing to a single reading.',
+};
+
+// Turn a recipe's "Ask: '…'" wrapper into the plain question.
+function followupQuestion(recipe) {
+  return (recipe.required_followup || '')
+    .replace(/^Ask:\s*['"]?/i, '')
+    .replace(/['"]\s*$/,'')
+    .trim();
+}
+
+/**
+ * Explain how the section's harmonic plan relates to its words, in the WHY format.
+ * Structural facts are THEORY; the relationship reading is a hedged HYPOTHESIS; the
+ * closing questions are the writer's. If the writer selected a contrast recipe, its
+ * creative hypothesis and required follow-up are folded in (still as hypothesis +
+ * the writer's question). Never asserts the lyric's emotion.
+ */
+function auditionRelationship(project, sectionId, { contrastRecipes = [], chosenRecipeId = null } = {}) {
+  const section = project.sections.find((s) => s.id === sectionId);
+  if (!section) throw new Error(`No section ${sectionId}`);
+  const plan = section.harmonicPlan;
+  if (!plan) throw new Error(`Section ${sectionId} has no harmonic plan yet`);
+
+  const relation = plan.relationToWords || 'ambiguous';
+  const out = [
+    wTh(`Structurally, the harmony ${closurePhrase(plan.closure)}${plan.chromaticism > 0 ? ', with borrowed color' : ''}, in a ${plan.mode} center.`),
+    wHyp(RELATION_HYPOTHESIS[relation] || RELATION_HYPOTHESIS.ambiguous),
+  ];
+
+  if (chosenRecipeId) {
+    const recipe = indexContrast(contrastRecipes).get(chosenRecipeId);
+    if (!recipe) throw new Error(`No contrast recipe ${chosenRecipeId}`);
+    out.push(wHyp(`This might fit — ${recipe.creative_hypothesis}`));
+    out.push(wYm(followupQuestion(recipe)));
+  } else {
+    out.push(wYm('Does that relationship feel true to what you are trying to say? Why or why not?'));
+  }
+  out.push(wYm('What did you hear?'));
+  return { relation, explanation: out };
+}
+
+// A browsing aid: loosely group contrast recipes by the relation they tend to
+// serve. This is a filter over the writer's menu, NOT a claim about their lyric.
+function classifyRelation(recipe) {
+  if (/^aligned/i.test(recipe.name)) return 'aligned';
+  const hint = `${recipe.name} ${recipe.creative_hypothesis}`.toLowerCase();
+  if (/(contrast|contradict|withhold|reveal|hidden|surface|against|complicate|while)/.test(hint)) {
+    return 'contrasted';
+  }
+  return 'ambiguous';
+}
+
+function suggestContrastRecipes(relation, recipes) {
+  return recipes
+    .filter((r) => classifyRelation(r) === relation)
+    .map((r) => ({ id: r.id, name: r.name, creative_hypothesis: r.creative_hypothesis }));
+}
+
+/**
+ * The harmonic arc across sections: each section's plan, and the transition between
+ * consecutive planned sections. A mode shift is described structurally, and where
+ * it matches a known section-contrast pattern (minor→major or major→minor), that
+ * recipe is offered as a hypothesis to explore — never as a statement about meaning.
+ */
+function harmonicArc(project) {
+  const sections = project.sections.map((s) => ({
+    sectionId: s.id, name: s.name, role: s.role, plan: s.harmonicPlan || null,
+  }));
+  const transitions = [];
+  for (let i = 1; i < sections.length; i += 1) {
+    const a = sections[i - 1];
+    const b = sections[i];
+    if (!a.plan || !b.plan) continue;
+    const modeShift = a.plan.mode !== b.plan.mode;
+    let hypothesisRecipeId = null;
+    if (modeShift && a.plan.mode === 'minor' && b.plan.mode === 'major') hypothesisRecipeId = 'E009';
+    else if (modeShift && a.plan.mode === 'major' && b.plan.mode === 'minor') hypothesisRecipeId = 'E010';
+    transitions.push({
+      from: a.sectionId,
+      to: b.sectionId,
+      description: modeShift
+        ? `${a.name} is in ${a.plan.mode}; ${b.name} shifts to ${b.plan.mode}`
+        : `${a.name} and ${b.name} stay in ${a.plan.mode}`,
+      modeShift,
+      hypothesisRecipeId,
+    });
+  }
+  return { sections, transitions };
+}
+
+/** Record the writer's verdict on the relationship (their meaning, their call). */
+function recordRelationshipFeedback(project, sectionId, { feelsTrue = null, note = null } = {}) {
+  return setRelationshipFeedback(project, sectionId, { feelsTrue, note }, 'user');
+}
+
+
+// ===== src/collab/schema.js =====
+// schema.js — the structured-output contract for LLM collaboration. The model must
+// return JSON matching this shape; anything else is rejected and the engine falls
+// back. Keeping the contract explicit is what lets deterministic code police the
+// model's output instead of trusting free prose.
+
+const SUGGESTION_TYPES = ['question', 'word_bank', 'line_alternative', 'direction', 'structural'];
+
+// What each intervention mode is expected to produce (from ui_copy behaviors).
+const MODE_TYPES = {
+  coach: ['question', 'structural'],       // ask first; minimal, structural
+  help: ['word_bank', 'structural', 'question'], // options after user input
+  collaborate: ['line_alternative'],       // complete lines, clearly AI-marked
+  rescue: ['direction'],                   // 3 substantially different directions
+};
+
+function validateSuggestions(output) {
+  const errors = [];
+  if (!output || typeof output !== 'object') return ['output must be an object'];
+  if (!Array.isArray(output.suggestions)) return ['output.suggestions must be an array'];
+  output.suggestions.forEach((s, i) => {
+    if (!s || typeof s !== 'object') { errors.push(`suggestion ${i} must be an object`); return; }
+    if (!SUGGESTION_TYPES.includes(s.type)) errors.push(`suggestion ${i}: unknown type "${s.type}"`);
+    if (typeof s.text !== 'string' || !s.text.trim()) errors.push(`suggestion ${i}: missing text`);
+  });
+  return errors;
+}
+
+
+// ===== src/collab/guards.js =====
+// guards.js — the deterministic checks that police the LLM boundary. These run on
+// the model's output (and, for safety, on the writer's input) so the model can
+// never diagnose, assert emotion as fact, claim personal meaning, or overwrite the
+// deterministic theory. Rejections are returned with reasons, not silently dropped.
+
+// --- Safety -----------------------------------------------------------------
+// Conservative detection of credible, imminent self-harm / harm-to-others intent.
+// On a hit, coaching pauses and the writer is pointed to immediate human support.
+const IMMINENT = [
+  /\bkill(ing)?\s+myself\b/i,
+  /\bend(ing)?\s+my\s+life\b/i,
+  /\btake\s+my\s+(own\s+)?life\b/i,
+  /\bwant\s+to\s+die\b/i,
+  /\b(going|about)\s+to\s+(kill|hurt|harm)\s+(myself|someone|him|her|them)\b/i,
+  /\bsuicidal?\b/i,
+  /\b(hurt|harm)\s+(myself|others|someone)\b/i,
+];
+
+const SAFETY_RESPONSE =
+  'It sounds like you might be in real danger right now, and that matters more than the song. '
+  + 'Please reach out for immediate help — contact your local emergency services or a crisis line '
+  + 'in your area, or someone you trust who can be with you right now. I can\'t be that support, '
+  + 'but I don\'t want you to be alone with this. We can come back to writing whenever you\'re ready.';
+
+function safetyPrecheck(userText) {
+  const t = userText || '';
+  if (IMMINENT.some((re) => re.test(t))) return { safe: false, response: SAFETY_RESPONSE };
+  return { safe: true };
+}
+
+// --- Meaning Lock -----------------------------------------------------------
+const DIAGNOSIS = /\byou\s+(are|seem|sound|might\s+be|'re)\s+(depress|anxious|trauma|avoidant|bipolar|suicidal|manic|ocd|adhd|in\s+denial)/i;
+const CAUSAL_EMOTION = /\b(makes?|make|causes?|will\s+make|guaranteed\s+to\s+(make|feel))\b[^.?!]*\b(sad|happy|anxious|angry|afraid|depressed|joyful|grief|calm|scared)\b/i;
+const NAMED_EMOTION_CHORD = /\bthe\s+(grief|sad|sadness|happy|happiness|anxiety|anger|joy)\s+(chord|progression|key)\b/i;
+const MEANING_CLAIM = /\byour\s+[\w']+\s+(symbol[iy][sz]es|represents|stands\s+for|means)\b/i;
+
+const EMOTION_WORD = /\b(sad|happy|joy|joyful|grief|griev|angry|anger|anxious|anxiety|afraid|fear|depress|melanchol|nostalg|hopeful|longing|heartbreak|somber|mournful)\b/i;
+const HEDGED = (s) => /\?\s*$/.test(s) || /\b(can|could|may|might|maybe|perhaps)\b/i.test(s);
+
+/**
+ * Reject suggestions that diagnose the writer, assert emotion as fact, name an
+ * "emotion chord", or claim personal meaning. Emotional language is allowed only
+ * when hedged as a hypothesis (and questions are always fine).
+ */
+function meaningLockGuard(suggestions) {
+  const clean = [];
+  const rejected = [];
+  for (const s of suggestions) {
+    const text = s.text || '';
+    let reason = null;
+    if (DIAGNOSIS.test(text)) reason = 'diagnoses the writer';
+    else if (CAUSAL_EMOTION.test(text)) reason = 'asserts emotion as a guaranteed effect';
+    else if (NAMED_EMOTION_CHORD.test(text)) reason = 'names an "emotion chord"';
+    else if (MEANING_CLAIM.test(text)) reason = 'claims the meaning of the writer\'s material';
+    else if (s.type !== 'question' && EMOTION_WORD.test(text) && !HEDGED(text)) {
+      reason = 'states an emotional reading without hedging it as a hypothesis';
+    }
+    if (reason) rejected.push({ text, reason });
+    else clean.push(s);
+  }
+  return { clean, rejected };
+}
+
+// --- Theory guard -----------------------------------------------------------
+// The LLM must not compute or assert deterministic theory; that comes from the
+// engine. Flag note-spellings and roman-numeral/spelling claims in model prose.
+const NOTE_RUN = /\b[A-G](#|b|##|bb)?(\s*[-–,]?\s*[A-G](#|b|##|bb)?){2,}\b/;
+const ROMAN_CLAIM = /\b(is|are|equals|=)\s+(the\s+)?(I|II|III|IV|V|VI|VII|i|ii|iii|iv|v|vi|vii)\b/;
+const SPELL_PHRASE = /\bthe\s+notes\s+(are|in|of)\b|\bis\s+spelled\b|\bconsists?\s+of\s+the\s+notes\b/i;
+
+/**
+ * Reject suggestions that make theory claims. The deterministic theory engine is
+ * the single source of truth for chord spellings and function (test T037).
+ */
+function theoryGuard(suggestions) {
+  const clean = [];
+  const rejected = [];
+  for (const s of suggestions) {
+    const text = s.text || '';
+    if (NOTE_RUN.test(text) || ROMAN_CLAIM.test(text) || SPELL_PHRASE.test(text)) {
+      rejected.push({ text, reason: 'makes a theory claim (theory comes from the deterministic engine)' });
+    } else {
+      clean.push(s);
+    }
+  }
+  return { clean, rejected };
+}
+
+
+// ===== src/collab/LLMClient.js =====
+// LLMClient.js — the provider-agnostic seam for LLM collaboration.
+//
+// The real client lives SERVER-SIDE (per the build phase): it implements
+// complete({ mode, system, messages, schema }) by calling a model API with the
+// system prompt this engine builds, requesting structured JSON output. It is
+// intentionally NOT bundled into this offline prototype — no keys, no network.
+//
+// StubLLMClient is the offline stand-in: deterministic, schema-valid canned output
+// per mode, so the whole collaboration pipeline (prompting, validation, guards,
+// provenance, fallback) is testable without a model. It can also simulate an
+// outage or inject deliberately bad output to exercise the guards.
+
+class LLMClient {
+  // eslint-disable-next-line no-unused-vars
+  async complete(request) {
+    throw new Error('LLMClient.complete is not implemented — provide a server-side client.');
+  }
+}
+
+const CANNED = {
+  coach: {
+    suggestions: [
+      { type: 'question', text: 'What did you notice first when this moment started?' },
+      { type: 'question', text: "What would a camera have caught that you haven't said yet?" },
+    ],
+  },
+  help: {
+    suggestions: [
+      { type: 'word_bank', text: 'porch, gravel, ignition, headlights, curb, doorway, hinge' },
+      { type: 'structural', text: 'Try letting the second line answer the first instead of adding a new image.' },
+    ],
+  },
+  collaborate: {
+    suggestions: [
+      { type: 'line_alternative', text: 'the porch light kept its watch while I backed away' },
+      { type: 'line_alternative', text: "I left the light on like a question I couldn't ask" },
+    ],
+  },
+  rescue: {
+    suggestions: [
+      { type: 'direction', text: 'Stay in the driveway the whole song; let time pass in one spot.' },
+      { type: 'direction', text: "Address the person who isn't there, in second person." },
+      { type: 'direction', text: 'Make the porch light the narrator, watching you leave.' },
+    ],
+  },
+};
+
+class StubLLMClient extends LLMClient {
+  constructor({ fail = false, inject = null } = {}) {
+    super();
+    this.fail = fail;      // simulate an outage
+    this.inject = inject;  // return this exact output (for guard tests)
+  }
+
+  async complete(request) {
+    if (this.fail) throw new Error('LLM unavailable');
+    if (this.inject) return this.inject;
+    return CANNED[request.mode] ?? { suggestions: [] };
+  }
+}
+
+
+// ===== src/collab/CollaborationEngine.js =====
+// CollaborationEngine.js
+// The controlled LLM boundary. It builds a request that carries the Meaning-Lock
+// rules and any deterministic theory as fixed context, sends it through a client,
+// then polices the response: schema-validate, strip theory claims, enforce Meaning
+// Lock, tag every surviving line as an AI_SUGGESTION, and keep the writer's accept
+// step explicit. If the model is unavailable, a deterministic fallback keeps the
+// session alive. No deterministic theory is ever delegated to the model.
+
+const MODES = ['coach', 'help', 'collaborate', 'rescue'];
+
+const COLLAB_REMINDER =
+  'These lines are AI-written suggestions — not yours until you choose them, and not about '
+  + 'your real life unless you make them so. Your own words always win, and you can supply your '
+  + 'own material at any point.';
+
+/**
+ * Build the request. The system prompt states the rules the model must follow and
+ * injects the deterministic theory as FACTS the model may explain but must not
+ * recompute or contradict. (The stub ignores the prompt; a real server-side client
+ * sends it.)
+ */
+function buildRequest(mode, context = {}) {
+  const theory = context.authoritativeTheory
+    ? `\n\nDETERMINISTIC THEORY (authoritative — explain it, never recompute or contradict it):\n${JSON.stringify(context.authoritativeTheory)}`
+    : '';
+  const system = [
+    'You are a songwriting collaborator inside a tool where the writer owns all meaning.',
+    'Rules you must follow:',
+    '- Meaning Lock: ask, never diagnose; never tell the writer what they feel or what their material means.',
+    '- Emotional readings are allowed ONLY as clearly hedged hypotheses that ask the writer, never as fact.',
+    '- Do not compute or assert music theory (chord spellings, scales, roman numerals); the tool computes those.',
+    '- Everything you return is a reversible suggestion the writer may reject; never claim to have written the song.',
+    `- Mode "${mode}": ${MODE_BEHAVIOR[mode] || ''}`,
+    'Return only JSON matching the requested schema.',
+    theory,
+  ].join('\n');
+  return { mode, system, messages: [{ role: 'user', content: context.userText || '' }], schema: MODE_TYPES[mode] || [] };
+}
+
+const MODE_BEHAVIOR = {
+  coach: 'Ask questions first; keep any suggestions minimal and structural.',
+  help: 'Offer word banks, options and structural alternatives after the writer\'s input.',
+  collaborate: 'Offer complete line alternatives, clearly marked as AI-written.',
+  rescue: 'Offer three substantially different directions, not one authoritative solution.',
+};
+
+/**
+ * Run a collaboration turn. Returns one of:
+ *  - { safety: true, response }         (imminent-danger input; coaching paused)
+ *  - { offline: true, reason, suggestions, reminder? }   (model unavailable/invalid)
+ *  - { mode, suggestions, rejected, reminder? }          (normal; suggestions tagged AI)
+ */
+async function collaborate(client, mode, context = {}) {
+  if (!MODES.includes(mode)) throw new Error(`Unknown mode "${mode}"`);
+
+  const safety = safetyPrecheck(context.userText || '');
+  if (!safety.safe) return { safety: true, response: safety.response, suggestions: [] };
+
+  const request = buildRequest(mode, context);
+  let output;
+  try {
+    output = await client.complete(request);
+  } catch (err) {
+    return fallback(mode, context, `model unavailable (${err.message})`);
+  }
+  if (validateSuggestions(output).length) return fallback(mode, context, 'invalid structured output');
+
+  // Theory claims are stripped first, then Meaning-Lock violations.
+  const afterTheory = theoryGuard(output.suggestions);
+  const afterMeaning = meaningLockGuard(afterTheory.clean);
+  const rejected = [...afterTheory.rejected, ...afterMeaning.rejected];
+
+  const suggestions = afterMeaning.clean.map((s) => ({
+    type: s.type,
+    text: s.text,
+    badge: s.badge || null,
+    fragment: asAiSuggestion(s.text, { mode, type: s.type }), // provenance-tagged
+  }));
+
+  const result = { mode, safety: false, suggestions, rejected };
+  if (mode === 'collaborate') result.reminder = COLLAB_REMINDER; // T007
+  return result;
+}
+
+// Deterministic fallback so an outage never disables the session (cf. T040).
+function fallback(mode, context, reason) {
+  const FALLBACKS = {
+    coach: [{ type: 'question', text: 'What happened right before this moment?' }],
+    help: [{ type: 'structural', text: 'Work from the words you already have — which line matters most?' }],
+    collaborate: [{ type: 'structural', text: 'The collaborator is offline. Your own lines still stand; keep going with what\'s yours.' }],
+    rescue: [
+      { type: 'direction', text: 'Zoom in: stay on one small detail for the whole section.' },
+      { type: 'direction', text: 'Zoom out: say where this sits in the larger story.' },
+      { type: 'direction', text: 'Change who you\'re talking to.' },
+    ],
+  };
+  return { offline: true, reason, mode, suggestions: FALLBACKS[mode] || [] };
+}
+
+/**
+ * Accept a suggestion into the song. Adding a new fragment keeps its AI_SUGGESTION
+ * provenance (honest: the writer didn't write it). Replacing an existing line goes
+ * through the provenance guard — overwriting USER text needs the writer's confirmed
+ * intent, and the prior version is preserved in history.
+ */
+function acceptSuggestion(project, sectionId, suggestion, { replaceFragmentId = null } = {}) {
+  if (!suggestion.fragment) throw new Error('Only a tagged AI suggestion can be accepted.');
+  if (replaceFragmentId) {
+    return replaceFragmentText(
+      project, replaceFragmentId, suggestion.fragment.text,
+      PROVENANCE.AI_SUGGESTION, { intent: 'user_confirmed' },
+    );
+  }
+  return addFragment(project, sectionId, suggestion.fragment);
+}
+
+
+// ===== src/handoff/LeadSheet.js =====
+// LeadSheet.js
+// Phase 7: turn a finished (or in-progress) project into a musician-ready handoff.
+// It assembles structure, per-section chords (spelled deterministically from the
+// stored roman numerals), lyrics with provenance, tempo/feel/key, and the list of
+// things still unresolved. Nothing here implies the tool or an AI performs the song
+// (test T010) — it hands the writer's work to a human player.
+
+const PROV_MARK = {
+  [PROVENANCE.USER]: 'you',
+  [PROVENANCE.AI_SUGGESTION]: 'ai',
+  [PROVENANCE.SYSTEM_ANALYSIS]: 'system',
+  [PROVENANCE.THEORY_ENGINE]: 'engine',
+};
+
+const RELATION_PHRASE = { aligned: 'align with', contrasted: 'contrast', ambiguous: 'stay ambiguous against' };
+
+// Spell a section's harmonic plan into chord symbols (from the engine, not stored).
+function chordsFor(plan) {
+  if (!plan || !Array.isArray(plan.romanNumerals)) return [];
+  const chords = progressionToChords(plan.romanNumerals, { tonic: plan.tonalCenter, mode: plan.mode });
+  return chords.map((c) => c.symbol);
+}
+
+// A single key summary if every planned section agrees, else "varies".
+function keySummary(project) {
+  const keys = new Set(
+    project.sections.filter((s) => s.harmonicPlan).map((s) => `${s.harmonicPlan.tonalCenter} ${s.harmonicPlan.mode}`),
+  );
+  if (keys.size === 1) return [...keys][0];
+  if (keys.size === 0) return project.settings?.tonalCenter || 'not set';
+  return 'varies (see sections)';
+}
+
+/** The list of things still open — surfaced for the writer, never auto-resolved. */
+function gatherUnresolved(project) {
+  const out = [];
+  for (const s of project.sections) {
+    if (!s.fragments.length) out.push({ kind: 'empty_section', where: s.name, text: `${s.name} has no lyrics yet.` });
+    if (s.harmonicPlan) {
+      const fb = s.relationshipFeedback;
+      if (!fb) out.push({ kind: 'relationship_unrated', where: s.name, text: `${s.name}: harmony chosen, but you haven't said whether it feels true.` });
+      else if (fb.feelsTrue === false) out.push({ kind: 'relationship_false', where: s.name, text: `${s.name}: you marked the harmony/lyric relationship as not feeling true${fb.note ? ` — "${fb.note}"` : ''}.` });
+    }
+    for (const f of s.fragments) {
+      if (f.truthRating != null && f.truthRating <= 2) {
+        out.push({ kind: 'low_truth', where: s.name, text: `${s.name}: "${f.text}" — you rated this low on truth.` });
+      }
+    }
+  }
+  return out;
+}
+
+/** Assemble the structured lead sheet. */
+function buildLeadSheet(project) {
+  const sections = project.sections.map((s) => {
+    const plan = s.harmonicPlan || null;
+    return {
+      name: s.name,
+      role: s.role || null,
+      goal: s.goal || null,
+      relationToWords: plan?.relationToWords || null,
+      romanNumerals: plan?.romanNumerals || [],
+      chords: chordsFor(plan),
+      lyrics: s.fragments.map((f) => ({ text: f.text, provenance: f.provenance, mark: PROV_MARK[f.provenance] || '?' })),
+    };
+  });
+  const counts = {};
+  for (const s of sections) for (const l of s.lyrics) counts[l.mark] = (counts[l.mark] || 0) + 1;
+  return {
+    title: project.title,
+    key: keySummary(project),
+    tempo: project.meta?.tempo ?? null,
+    feel: project.meta?.feel ?? null,
+    structure: project.structure?.name || null,
+    sections,
+    unresolved: gatherUnresolved(project),
+    provenanceSummary: counts,
+  };
+}
+
+/** Render the lead sheet as Markdown a musician can read (chords over lyrics, per section). */
+function toMarkdown(sheet) {
+  const L = [];
+  L.push(`# ${sheet.title}`);
+  const head = [`**Key:** ${sheet.key}`];
+  if (sheet.tempo) head.push(`**Tempo:** ${sheet.tempo} BPM`);
+  if (sheet.feel) head.push(`**Feel:** ${sheet.feel}`);
+  if (sheet.structure) head.push(`**Form:** ${sheet.structure}`);
+  L.push(head.join('  •  '));
+  L.push('');
+  L.push('_Chords are section-level (a progression per section), not aligned to individual words._');
+  L.push('');
+
+  for (const s of sheet.sections) {
+    L.push(`## ${s.name}${s.role && s.role !== s.name ? ` _(${s.role})_` : ''}`);
+    if (s.goal) L.push(`*Goal: ${s.goal}*`);
+    if (s.chords.length) {
+      L.push('```');
+      L.push(`| ${s.chords.join(' | ')} |`);
+      if (s.romanNumerals.length) L.push(`  ${s.romanNumerals.join('   ')}`);
+      L.push('```');
+      if (s.relationToWords) L.push(`_Harmony set to ${RELATION_PHRASE[s.relationToWords] || s.relationToWords} the words._`);
+    }
+    if (s.lyrics.length) {
+      for (const l of s.lyrics) L.push(`${l.text}  \`(${l.mark})\``);
+    } else {
+      L.push('_(no lyrics yet)_');
+    }
+    L.push('');
+  }
+
+  L.push('---');
+  L.push('### Still open');
+  if (sheet.unresolved.length) for (const u of sheet.unresolved) L.push(`- ${u.text}`);
+  else L.push('- Nothing flagged.');
+  L.push('');
+  L.push('### Provenance key');
+  L.push('`(you)` = your words · `(ai)` = AI-suggested line you kept · `(engine)`/`(system)` = tool-generated');
+  const cs = Object.entries(sheet.provenanceSummary).map(([k, v]) => `${k}: ${v}`).join(' · ');
+  if (cs) L.push(`\nLines by source — ${cs}`);
+  return L.join('\n') + '\n';
+}
+
+/** A compact chord map: section → progression. */
+function toChordMap(sheet) {
+  const L = [`${sheet.title} — chord map (${sheet.key})`];
+  for (const s of sheet.sections) {
+    L.push(`${s.name}: ${s.chords.length ? s.chords.join(' ') : '(no chords yet)'}`);
+  }
+  return L.join('\n') + '\n';
+}
+
+
+const DATA = {"discovery_questions":[{"id":"Q001","category":"openers","prompt":"Give me one true sentence about what is on your mind.","purpose":"lower pressure and establish authentic raw material","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q002","category":"openers","prompt":"Do you have a story, a feeling, a person, a place, or just a phrase right now?","purpose":"lower pressure and establish authentic raw material","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q003","category":"openers","prompt":"What happened that made you want to write today?","purpose":"lower pressure and establish authentic raw material","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q004","category":"openers","prompt":"If this song never had to be heard by anyone else, what would you say?","purpose":"lower pressure and establish authentic raw material","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q005","category":"openers","prompt":"What is the sentence you keep editing in your head before you even say it?","purpose":"lower pressure and establish authentic raw material","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q006","category":"openers","prompt":"Start ugly: say it without rhyme, metaphor, or trying to sound like a songwriter.","purpose":"lower pressure and establish authentic raw material","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q007","category":"openers","prompt":"What are you trying to get out of your body or mind and onto the page?","purpose":"lower pressure and establish authentic raw material","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q008","category":"openers","prompt":"What would you write if nobody could judge the grammar, rhyme, or meaning yet?","purpose":"lower pressure and establish authentic raw material","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q009","category":"scene","prompt":"Where were you when this became real?","purpose":"convert abstraction into a specific scene","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q010","category":"scene","prompt":"What time of day do you see when you think about it?","purpose":"convert abstraction into a specific scene","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q011","category":"scene","prompt":"What was the weather doing?","purpose":"convert abstraction into a specific scene","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q012","category":"scene","prompt":"What was the light like?","purpose":"convert abstraction into a specific scene","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q013","category":"scene","prompt":"What was the first physical detail you noticed?","purpose":"convert abstraction into a specific scene","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q014","category":"scene","prompt":"What object in the room would recognize this story?","purpose":"convert abstraction into a specific scene","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q015","category":"scene","prompt":"What could you hear in the background?","purpose":"convert abstraction into a specific scene","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q016","category":"scene","prompt":"What would a camera have seen that you have not said yet?","purpose":"convert abstraction into a specific scene","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q017","category":"senses","prompt":"What did the place smell like?","purpose":"retrieve sensory detail and embodiment","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q018","category":"senses","prompt":"What texture do you remember?","purpose":"retrieve sensory detail and embodiment","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q019","category":"senses","prompt":"Was the air warm, cold, heavy, dry, wet, still, or moving?","purpose":"retrieve sensory detail and embodiment","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q020","category":"senses","prompt":"What sound do you associate with this memory?","purpose":"retrieve sensory detail and embodiment","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q021","category":"senses","prompt":"Was there a taste connected to it?","purpose":"retrieve sensory detail and embodiment","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q022","category":"senses","prompt":"What color keeps appearing when you think about it?","purpose":"retrieve sensory detail and embodiment","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q023","category":"senses","prompt":"What physical sensation showed up in your body?","purpose":"retrieve sensory detail and embodiment","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q024","category":"senses","prompt":"If this memory had a temperature, what would it be?","purpose":"retrieve sensory detail and embodiment","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q025","category":"dialogue","prompt":"What exact sentence did someone say that stayed with you?","purpose":"capture voice, conflict and memorable phrasing","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q026","category":"dialogue","prompt":"What did you say back?","purpose":"capture voice, conflict and memorable phrasing","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q027","category":"dialogue","prompt":"What did you almost say but stop yourself from saying?","purpose":"capture voice, conflict and memorable phrasing","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q028","category":"dialogue","prompt":"What sentence would you say now if you could return to that moment?","purpose":"capture voice, conflict and memorable phrasing","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q029","category":"dialogue","prompt":"What phrase from this person can you hear in their voice?","purpose":"capture voice, conflict and memorable phrasing","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q030","category":"dialogue","prompt":"What did you tell everyone else happened?","purpose":"capture voice, conflict and memorable phrasing","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q031","category":"dialogue","prompt":"What did you tell yourself happened?","purpose":"capture voice, conflict and memorable phrasing","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q032","category":"dialogue","prompt":"What is the shortest sentence that contains the conflict?","purpose":"capture voice, conflict and memorable phrasing","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q033","category":"contradiction","prompt":"What did you pretend was fine?","purpose":"surface emotional complexity without diagnosing","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q034","category":"contradiction","prompt":"What did you say you wanted, and what did you actually want?","purpose":"surface emotional complexity without diagnosing","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q035","category":"contradiction","prompt":"What were you doing on the outside while something different was happening inside?","purpose":"surface emotional complexity without diagnosing","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q036","category":"contradiction","prompt":"What two feelings were true at the same time?","purpose":"surface emotional complexity without diagnosing","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q037","category":"contradiction","prompt":"What part of this story makes no sense even to you?","purpose":"surface emotional complexity without diagnosing","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q038","category":"contradiction","prompt":"What did you laugh about that was not really funny?","purpose":"surface emotional complexity without diagnosing","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q039","category":"contradiction","prompt":"What did you hold onto after deciding to let go?","purpose":"surface emotional complexity without diagnosing","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q040","category":"contradiction","prompt":"What are you relieved about and sad about at the same time?","purpose":"surface emotional complexity without diagnosing","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q041","category":"objects","prompt":"What object carries more meaning than it should?","purpose":"create concrete symbolic material from the user's own life","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q042","category":"objects","prompt":"What did they leave behind?","purpose":"create concrete symbolic material from the user's own life","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q043","category":"objects","prompt":"What did you keep?","purpose":"create concrete symbolic material from the user's own life","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q044","category":"objects","prompt":"What did you throw away?","purpose":"create concrete symbolic material from the user's own life","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q045","category":"objects","prompt":"What is sitting somewhere right now because of this story?","purpose":"create concrete symbolic material from the user's own life","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q046","category":"objects","prompt":"What object would make a better song title than the name of the emotion?","purpose":"create concrete symbolic material from the user's own life","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q047","category":"objects","prompt":"What ordinary object became different after this happened?","purpose":"create concrete symbolic material from the user's own life","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q048","category":"objects","prompt":"If one object had to represent the whole story, which one would you choose?","purpose":"create concrete symbolic material from the user's own life","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q049","category":"stakes","prompt":"What did you want to happen?","purpose":"clarify desire, loss, risk and unresolved movement","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q050","category":"stakes","prompt":"What were you afraid would happen?","purpose":"clarify desire, loss, risk and unresolved movement","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q051","category":"stakes","prompt":"What changed after this?","purpose":"clarify desire, loss, risk and unresolved movement","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q052","category":"stakes","prompt":"What could not go back to the way it was?","purpose":"clarify desire, loss, risk and unresolved movement","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q053","category":"stakes","prompt":"What did you lose, gain, protect, or finally admit?","purpose":"clarify desire, loss, risk and unresolved movement","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q054","category":"stakes","prompt":"What are you still waiting for?","purpose":"clarify desire, loss, risk and unresolved movement","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q055","category":"stakes","prompt":"What is unresolved?","purpose":"clarify desire, loss, risk and unresolved movement","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q056","category":"stakes","prompt":"If nothing changes, what hurts about that?","purpose":"clarify desire, loss, risk and unresolved movement","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q057","category":"perspective","prompt":"Whose version of this story would be different from yours?","purpose":"expand point of view and narrative options","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q058","category":"perspective","prompt":"What would the other person say happened?","purpose":"expand point of view and narrative options","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q059","category":"perspective","prompt":"What would your younger self notice first?","purpose":"expand point of view and narrative options","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q060","category":"perspective","prompt":"What would your future self want you to say here?","purpose":"expand point of view and narrative options","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q061","category":"perspective","prompt":"Are you speaking to someone, about someone, or only to yourself?","purpose":"expand point of view and narrative options","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q062","category":"perspective","prompt":"What changes if the verse says 'I' but the chorus says 'you'?","purpose":"expand point of view and narrative options","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q063","category":"perspective","prompt":"What detail would an outsider notice that you ignore?","purpose":"expand point of view and narrative options","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q064","category":"perspective","prompt":"What is true from your point of view even if someone else remembers it differently?","purpose":"expand point of view and narrative options","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q065","category":"truth_check","prompt":"Which line sounds good but does not feel true?","purpose":"protect authorship and emotional honesty","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q066","category":"truth_check","prompt":"Which line feels almost too honest to keep?","purpose":"protect authorship and emotional honesty","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q067","category":"truth_check","prompt":"What are you hiding behind a metaphor?","purpose":"protect authorship and emotional honesty","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q068","category":"truth_check","prompt":"Where are you trying too hard to rhyme?","purpose":"protect authorship and emotional honesty","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q069","category":"truth_check","prompt":"Which line would hurt the song most if we deleted it?","purpose":"protect authorship and emotional honesty","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q070","category":"truth_check","prompt":"What word would you actually use in real life?","purpose":"protect authorship and emotional honesty","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q071","category":"truth_check","prompt":"Is there a prettier version of this sentence that is less true?","purpose":"protect authorship and emotional honesty","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q072","category":"truth_check","prompt":"Rate this section from 1 to 5: 1 means 'I am hiding'; 5 means 'I almost do not want anyone to hear this.'","purpose":"protect authorship and emotional honesty","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q073","category":"forward_motion","prompt":"What changed between the beginning and end of this moment?","purpose":"create structural development rather than repeated exposition","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q074","category":"forward_motion","prompt":"What can Verse 2 reveal that Verse 1 does not know yet?","purpose":"create structural development rather than repeated exposition","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q075","category":"forward_motion","prompt":"What question should the chorus keep asking or answering?","purpose":"create structural development rather than repeated exposition","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q076","category":"forward_motion","prompt":"What truth belongs in the bridge because you are not ready to say it earlier?","purpose":"create structural development rather than repeated exposition","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q077","category":"forward_motion","prompt":"Where should the listener understand something before the narrator does?","purpose":"create structural development rather than repeated exposition","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q078","category":"forward_motion","prompt":"What image can return later with a different meaning?","purpose":"create structural development rather than repeated exposition","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q079","category":"forward_motion","prompt":"What single phrase could survive every section and mean something different each time?","purpose":"create structural development rather than repeated exposition","ai_rule":"Ask. Do not answer for the writer."},{"id":"Q080","category":"forward_motion","prompt":"What is the smallest next step the narrator takes?","purpose":"create structural development rather than repeated exposition","ai_rule":"Ask. Do not answer for the writer."}],"ui_copy":{"product_voice":{"traits":["warm","curious","respectful","unhurried","specific","non-judgmental","never saccharine"],"avoid":["therapy-speak by default","fake praise","over-celebration","diagnosis","telling users what they feel","generic motivational quotes"],"core_rule":"Encourage the act of writing, not the quality of the user's pain."},"first_visit_headlines":["You do not need a song yet. Start with one true sentence.","Bring the feeling. We’ll help you find the song inside it.","You already have the raw material. Start where it hurts, glows, confuses, or refuses to leave.","No rhyme required. No music theory required. Just tell the truth as you know it.","A song can start with a person, a place, an object, a sentence, or something you cannot quite explain."],"first_visit_subcopy":["This space helps you turn your own experiences into lyrics, structure and chords. It will ask questions, explain choices and offer options. You remain the writer.","Write badly first. We can shape it later.","Nothing has to sound like a lyric until you are ready."],"returning_session_headlines":["Welcome back. Your song is still where you left it.","Ready to hear what changed since last time?","Come back to the line you could not stop thinking about.","You do not have to finish it today. Move one honest line forward.","Pick up the thread. What feels different now?","Your last version is saved. We will not overwrite it without you."],"low_pressure_buttons":["Start with one sentence","Say it ugly","I only have a feeling","I have a story","I have a line","I have chords","Open my last song"],"coach_microcopy":["No need to rhyme yet.","Keep your original. We can compare versions.","I can explain why I am suggesting this.","If that does not sound like you, reject it.","We can make the music agree with the lyric, or push against it.","You do not have to name the feeling. Show me what happened.","That line sounds important because you returned to it. Is it important to you?"],"truth_meter":{"prompt":"How true does this section feel to you?","scale":[{"value":1,"label":"I’m hiding"},{"value":2,"label":"Some of me"},{"value":3,"label":"Pretty close"},{"value":4,"label":"That’s me"},{"value":5,"label":"I almost don’t want anyone to hear this"}],"rule":"Never score truth automatically. Only the user supplies this rating."},"why_panel":{"tabs":["What is happening musically?","Why might a listener notice it?","Why does it matter to you?"],"rules":["Tab 1 uses objective theory where possible.","Tab 2 separates research-supported effects from creative hypotheses.","Tab 3 is never answered for the user."]},"intervention_modes":[{"id":"coach","name":"Coach me","behavior":"Ask questions first. Suggestions are minimal and mostly structural."},{"id":"help","name":"Help me","behavior":"Offer word banks, rhyme families, chord options and structural alternatives after user input."},{"id":"collaborate","name":"Collaborate","behavior":"Offer complete line alternatives only after establishing the user's language and intent. Clearly mark AI-written text."},{"id":"rescue","name":"I’m stuck","behavior":"Offer 3 substantially different directions, not one authoritative solution."}]},"structure_recipes":[{"id":"S001","name":"Verse–Chorus","form":["Verse 1","Chorus","Verse 2","Chorus","Bridge","Final Chorus"],"best_for":"clear recurring emotional thesis with developing evidence","rule":"Verse 2 must advance, not paraphrase."},{"id":"S002","name":"Verse–Pre–Chorus","form":["Verse 1","Pre","Chorus","Verse 2","Pre","Chorus","Bridge","Chorus"],"best_for":"songs that benefit from a tension ramp before the chorus","rule":"Pre-chorus should change function or momentum, not just add another verse."},{"id":"S003","name":"Refrain Verse","form":["Verse + Refrain","Verse + Refrain","Verse + Refrain","Closing Refrain"],"best_for":"storytelling where one repeated line gains new meaning","rule":"Keep the refrain stable enough to register; evolve context around it."},{"id":"S004","name":"AABA","form":["A1","A2","B","A3"],"best_for":"a recurring core idea with a contrasting bridge","rule":"A sections may vary lyrically while retaining recognizable musical identity."},{"id":"S005","name":"Strophic","form":["Verse 1","Verse 2","Verse 3","Verse 4"],"best_for":"narrative songs where music stays stable while words progress","rule":"Each stanza must earn its place through new information."},{"id":"S006","name":"Through-Composed","form":["Section A","Section B","Section C","Section D"],"best_for":"stories or emotional movement that resist repetition","rule":"Use recurring motifs to preserve coherence."},{"id":"S007","name":"Chorus First","form":["Chorus","Verse 1","Chorus","Verse 2","Chorus","Bridge","Chorus"],"best_for":"songs whose central statement is already known","rule":"Verses should complicate the opening claim."},{"id":"S008","name":"Slow Reveal","form":["Verse 1","Verse 2","Chorus","Verse 3","Chorus","Bridge/Outro"],"best_for":"songs where context must accumulate before the central statement lands","rule":"Delay should create discovery, not confusion."},{"id":"S009","name":"One-Scene Song","form":["Scene A","Deepen A","Turn","Return to A"],"best_for":"intimate writing anchored to one moment","rule":"Change interpretation rather than location."},{"id":"S010","name":"Before / After","form":["Before","Chorus","After","Chorus","What I Know Now","Final Chorus"],"best_for":"threshold events","rule":"Use at least one repeated detail across timelines."},{"id":"S011","name":"Question / Evidence","form":["Question","Evidence 1","Question","Evidence 2","Question changed"],"best_for":"uncertainty and self-inquiry","rule":"The question may remain unanswered."},{"id":"S012","name":"Letter","form":["Address","Memory","What I Could Not Say","What I Say Now","Sign-off/Outro"],"best_for":"direct address","rule":"Do not force resolution if the writer does not have it."},{"id":"S013","name":"List Song With Turn","form":["List A","List B","Turn","Reframed List/Hook"],"best_for":"accumulation, humor, grief, memory","rule":"The turn must change the function of the list."},{"id":"S014","name":"Two Voices","form":["Voice A","Voice B","Overlap/Chorus","Voice A changed","Voice B changed"],"best_for":"conflict or relationship perspective","rule":"Do not invent another person's internal state as fact."},{"id":"S015","name":"Memory / Present","form":["Then","Now","Then","Now","Integration/Outro"],"best_for":"autobiographical contrast","rule":"Use concrete time/location markers."},{"id":"S016","name":"Minimal Mantra","form":["Short Verse","Repeated Hook","Short Verse","Repeated Hook","Variation"],"best_for":"few words with strong repetition","rule":"Repetition should feel chosen, not like missing content."},{"id":"S017","name":"Escalating Verses","form":["V1 small detail","V2 consequence","V3 admission","Final refrain"],"best_for":"story songs without conventional chorus","rule":"Each verse raises stakes or understanding."},{"id":"S018","name":"Open Ending","form":["Verse","Chorus","Verse","Chorus","Bridge","Unresolved Outro"],"best_for":"situations that genuinely remain unresolved","rule":"Do not manufacture closure for comfort."}],"craft_recipes":[{"id":"C001","name":"Concrete Evidence","mechanic":"Replace an abstract emotional label with observable evidence.","why":"Instead of naming the feeling, ask what someone could see, hear, touch, or notice.","pattern":"emotion -> physical evidence","category":"songwriting_craft","fact_status":"craft_principle_not_law"},{"id":"C002","name":"Surface vs Truth","mechanic":"Place what the narrator says beside what the narrator means.","why":"Useful for denial, politeness, masking, uncertainty and contradiction.","pattern":"public statement <-> private truth","category":"songwriting_craft","fact_status":"craft_principle_not_law"},{"id":"C003","name":"Object Anchor","mechanic":"Let one ordinary object carry recurring narrative weight.","why":"The object comes from the writer's real or imagined scene, not from AI invention unless requested.","pattern":"object + changing context","category":"songwriting_craft","fact_status":"craft_principle_not_law"},{"id":"C004","name":"Refrain Evolution","mechanic":"Repeat a phrase while changing the surrounding context so its meaning shifts.","why":"Repetition can provide familiarity while context creates development.","pattern":"constant phrase + changed meaning","category":"songwriting_craft","fact_status":"craft_principle_not_law"},{"id":"C005","name":"Title From Speech","mechanic":"Find a title inside the writer's natural language.","why":"Prefer phrases the user already wrote over invented poetic titles.","pattern":"user phrase -> title candidate","category":"songwriting_craft","fact_status":"craft_principle_not_law"},{"id":"C006","name":"Specific Before Universal","mechanic":"Start with a precise scene, then allow the listener to generalize.","why":"Specificity often gives the listener something concrete to inhabit.","pattern":"scene -> implication","category":"songwriting_craft","fact_status":"craft_principle_not_law"},{"id":"C007","name":"Delayed Explanation","mechanic":"Show an image before explaining it.","why":"Creates curiosity without requiring obscurity.","pattern":"image -> later context","category":"songwriting_craft","fact_status":"craft_principle_not_law"},{"id":"C008","name":"Question Chorus","mechanic":"Let the chorus carry a question the verses complicate.","why":"The chorus does not need to answer it.","pattern":"verse evidence -> repeated question","category":"songwriting_craft","fact_status":"craft_principle_not_law"},{"id":"C009","name":"Answer Chorus","mechanic":"Let the verses explore confusion and the chorus state the simplest truth available.","why":"Do not overstate certainty the writer does not feel.","pattern":"complexity -> simple thesis","category":"songwriting_craft","fact_status":"craft_principle_not_law"},{"id":"C010","name":"Perspective Shift","mechanic":"Change pronoun or vantage point between sections.","why":"Can reveal distance, accountability or re-interpretation.","pattern":"I -> you / we / they","category":"songwriting_craft","fact_status":"craft_principle_not_law"},{"id":"C011","name":"Time Jump","mechanic":"Move between then and now.","why":"Use a recurring detail to orient the listener.","pattern":"past scene -> present meaning","category":"songwriting_craft","fact_status":"craft_principle_not_law"},{"id":"C012","name":"Before / After","mechanic":"Construct two scenes around a change.","why":"Useful when the emotional event is a threshold.","pattern":"before -> event -> after","category":"songwriting_craft","fact_status":"craft_principle_not_law"},{"id":"C013","name":"Unsymmetrical Truth","mechanic":"Allow one line to be longer or structurally awkward when natural speech needs it.","why":"Craft should serve voice, not force every thought into identical line length.","pattern":"speech first -> meter refinement","category":"songwriting_craft","fact_status":"craft_principle_not_law"},{"id":"C014","name":"Internal Rhyme","mechanic":"Use rhyme inside lines rather than only at line endings.","why":"Can increase musicality without making the lyric feel nursery-like.","pattern":"internal sound echo","category":"songwriting_craft","fact_status":"craft_principle_not_law"},{"id":"C015","name":"Slant Rhyme","mechanic":"Use approximate sound relationships.","why":"Preserves vocabulary choice when perfect rhyme would distort meaning.","pattern":"meaning priority + sound kinship","category":"songwriting_craft","fact_status":"craft_principle_not_law"},{"id":"C016","name":"Rhyme Restraint","mechanic":"Deliberately leave important lines unrhymed.","why":"A break in pattern can attract attention, but effect is contextual.","pattern":"pattern -> intentional break","category":"songwriting_craft","fact_status":"craft_principle_not_law"},{"id":"C017","name":"Consonant Echo","mechanic":"Repeat consonant sounds across nearby words.","why":"Useful as a sound-shaping tool, not a substitute for meaning.","pattern":"alliteration / consonance","category":"songwriting_craft","fact_status":"craft_principle_not_law"},{"id":"C018","name":"Vowel Color","mechanic":"Notice repeated vowel shapes that may sing comfortably together.","why":"Treat as a vocal/melodic consideration, not an emotional law.","pattern":"assonance","category":"songwriting_craft","fact_status":"craft_principle_not_law"},{"id":"C019","name":"Compression","mechanic":"Remove a line that only restates the previous line.","why":"Ask whether the deletion increases force without losing necessary meaning.","pattern":"two statements -> one stronger statement","category":"songwriting_craft","fact_status":"craft_principle_not_law"},{"id":"C020","name":"Expansion","mechanic":"Stay with a detail longer instead of racing to the conclusion.","why":"Useful when the writer is summarizing rather than inhabiting the moment.","pattern":"summary -> scene","category":"songwriting_craft","fact_status":"craft_principle_not_law"},{"id":"C021","name":"Callback","mechanic":"Return to an earlier phrase or image near the end.","why":"The return can create coherence or altered meaning.","pattern":"early detail -> late return","category":"songwriting_craft","fact_status":"craft_principle_not_law"},{"id":"C022","name":"Bridge Revelation","mechanic":"Reserve a new truth, angle, admission or consequence for the bridge.","why":"A bridge should earn its existence by changing perspective, energy, harmony or information.","pattern":"established pattern -> new information","category":"songwriting_craft","fact_status":"craft_principle_not_law"},{"id":"C023","name":"Verse Escalation","mechanic":"Make Verse 2 advance the story rather than paraphrase Verse 1.","why":"Add consequence, contradiction, new time, new evidence or changed perspective.","pattern":"V1 state -> V2 development","category":"songwriting_craft","fact_status":"craft_principle_not_law"},{"id":"C024","name":"Hook By Reduction","mechanic":"Reduce the song's emotional thesis to the shortest phrase that still feels true.","why":"Short does not automatically mean better; truth outranks brevity.","pattern":"thesis -> compact phrase","category":"songwriting_craft","fact_status":"craft_principle_not_law"},{"id":"C025","name":"Hook By Collision","mechanic":"Place two ideas together that do not comfortably coexist.","why":"Use only when both are genuinely part of the writer's meaning.","pattern":"idea A + conflicting idea B","category":"songwriting_craft","fact_status":"craft_principle_not_law"},{"id":"C026","name":"Literal / Figurative Toggle","mechanic":"Test whether a metaphor clarifies or hides the truth.","why":"If the metaphor is generic, return to literal detail.","pattern":"literal <-> metaphor","category":"songwriting_craft","fact_status":"craft_principle_not_law"},{"id":"C027","name":"One Room Rule","mechanic":"Keep one verse inside one physical location.","why":"A constraint can increase specificity.","pattern":"single scene constraint","category":"songwriting_craft","fact_status":"craft_principle_not_law"},{"id":"C028","name":"One Moment Rule","mechanic":"Write a section from one short slice of time.","why":"Useful for writers who are summarizing years at once.","pattern":"time compression","category":"songwriting_craft","fact_status":"craft_principle_not_law"},{"id":"C029","name":"Unsent Message","mechanic":"Write the section as if it were a message that will never be sent.","why":"The writer decides whether any of it belongs in the final lyric.","pattern":"direct address exercise","category":"songwriting_craft","fact_status":"craft_principle_not_law"},{"id":"C030","name":"Witness Detail","mechanic":"Include one detail that proves the narrator was there.","why":"Avoid fabricated realism; use writer-supplied detail.","pattern":"specific evidence","category":"songwriting_craft","fact_status":"craft_principle_not_law"},{"id":"C031","name":"Emotional Misdirection","mechanic":"Let the lyric initially imply one meaning, then reveal another.","why":"Do not manufacture twist endings merely for cleverness.","pattern":"initial interpretation -> reframe","category":"songwriting_craft","fact_status":"craft_principle_not_law"},{"id":"C032","name":"Negative Space","mechanic":"Leave something unstated when the surrounding details make it legible.","why":"Ambiguity should invite interpretation, not conceal weak writing.","pattern":"evidence -> omission","category":"songwriting_craft","fact_status":"craft_principle_not_law"},{"id":"C033","name":"Plainspoken Line","mechanic":"Follow a poetic or image-heavy passage with an ordinary direct sentence.","why":"Contrast in language density can increase clarity.","pattern":"image -> plain truth","category":"songwriting_craft","fact_status":"craft_principle_not_law"},{"id":"C034","name":"Motif Transformation","mechanic":"Repeat an image, rhythm or phrase with a small alteration.","why":"The changed element should correspond to narrative movement when possible.","pattern":"motif A -> motif A'","category":"songwriting_craft","fact_status":"craft_principle_not_law"},{"id":"C035","name":"List With Turn","mechanic":"Use a list, then break it with a line that changes the meaning.","why":"Useful for accumulation and reveal.","pattern":"A, B, C -> turn","category":"songwriting_craft","fact_status":"craft_principle_not_law"},{"id":"C036","name":"End On Image","mechanic":"End a section on a concrete image instead of an explanatory emotion word.","why":"Let the user decide whether ambiguity or directness better serves the song.","pattern":"statement -> image","category":"songwriting_craft","fact_status":"craft_principle_not_law"}],"emotional_contrast_recipes":[{"id":"E001","name":"Aligned brightness","lyric_state":"positive/hopeful","music_direction":"major-oriented or consonant center","rhythm_direction":"energetic or open","creative_hypothesis":"Music and lyric broadly reinforce each other.","required_followup":"Ask: 'Does that relationship feel true to what you are trying to say? Why or why not?'","claim_status":"creative_hypothesis"},{"id":"E002","name":"Aligned heaviness","lyric_state":"grief/loss/uncertainty","music_direction":"minor-oriented or tension-rich","rhythm_direction":"restrained or slow","creative_hypothesis":"Music and lyric broadly reinforce each other.","required_followup":"Ask: 'Does that relationship feel true to what you are trying to say? Why or why not?'","claim_status":"creative_hypothesis"},{"id":"E003","name":"Smile over fracture","lyric_state":"dark/private pain","music_direction":"bright major-oriented","rhythm_direction":"upbeat","creative_hypothesis":"Surface can suggest normalcy while lyric reveals distress.","required_followup":"Ask: 'Does that relationship feel true to what you are trying to say? Why or why not?'","claim_status":"creative_hypothesis"},{"id":"E004","name":"Hope with doubt","lyric_state":"hopeful","music_direction":"minor-oriented","rhythm_direction":"moderate","creative_hypothesis":"Harmony can complicate certainty without negating the lyric.","required_followup":"Ask: 'Does that relationship feel true to what you are trying to say? Why or why not?'","claim_status":"creative_hypothesis"},{"id":"E005","name":"Defiant brightness","lyric_state":"anger/resolve","music_direction":"major/modal","rhythm_direction":"driving","creative_hypothesis":"Brightness can read as assertion rather than cheerfulness.","required_followup":"Ask: 'Does that relationship feel true to what you are trying to say? Why or why not?'","claim_status":"creative_hypothesis"},{"id":"E006","name":"Tender conflict","lyric_state":"love + loss","music_direction":"major with borrowed minor","rhythm_direction":"gentle","creative_hypothesis":"Parallel-mode borrowing can color an otherwise major center.","required_followup":"Ask: 'Does that relationship feel true to what you are trying to say? Why or why not?'","claim_status":"creative_hypothesis"},{"id":"E007","name":"False arrival","lyric_state":"unresolved lyric","music_direction":"strong cadence","rhythm_direction":"steady","creative_hypothesis":"Music resolves while the story does not; useful as intentional contradiction.","required_followup":"Ask: 'Does that relationship feel true to what you are trying to say? Why or why not?'","claim_status":"creative_hypothesis"},{"id":"E008","name":"Refused arrival","lyric_state":"decisive lyric","music_direction":"deceptive or unresolved cadence","rhythm_direction":"driving","creative_hypothesis":"Harmony withholds closure while words claim certainty.","required_followup":"Ask: 'Does that relationship feel true to what you are trying to say? Why or why not?'","claim_status":"creative_hypothesis"},{"id":"E009","name":"Dark verse / open chorus","lyric_state":"contained pain -> release","music_direction":"minor/ambiguous verse -> relative/parallel major chorus","rhythm_direction":"expanding","creative_hypothesis":"Section contrast can represent a change in stance.","required_followup":"Ask: 'Does that relationship feel true to what you are trying to say? Why or why not?'","claim_status":"creative_hypothesis"},{"id":"E010","name":"Open verse / dark chorus","lyric_state":"surface ease -> private truth","music_direction":"major verse -> parallel/relative minor chorus","rhythm_direction":"drop or intensify","creative_hypothesis":"Chorus reveals weight hidden by verse.","required_followup":"Ask: 'Does that relationship feel true to what you are trying to say? Why or why not?'","claim_status":"creative_hypothesis"},{"id":"E011","name":"Still words / restless music","lyric_state":"numb or restrained lyric","music_direction":"harmonic movement/tension","rhythm_direction":"active","creative_hypothesis":"Music can carry agitation the narrator does not verbalize.","required_followup":"Ask: 'Does that relationship feel true to what you are trying to say? Why or why not?'","claim_status":"creative_hypothesis"},{"id":"E012","name":"Restless words / still music","lyric_state":"anxious/rapid thoughts","music_direction":"pedal/drone/minimal harmony","rhythm_direction":"steady","creative_hypothesis":"Stable foundation can contrast with verbal turbulence.","required_followup":"Ask: 'Does that relationship feel true to what you are trying to say? Why or why not?'","claim_status":"creative_hypothesis"},{"id":"E013","name":"Comic shield","lyric_state":"pain described with humor","music_direction":"light/grooving","rhythm_direction":"upbeat","creative_hypothesis":"Contrast may reflect coping, distance or social masking; writer supplies meaning.","required_followup":"Ask: 'Does that relationship feel true to what you are trying to say? Why or why not?'","claim_status":"creative_hypothesis"},{"id":"E014","name":"Memory glow","lyric_state":"painful memory with affection","music_direction":"major + chromatic shadow","rhythm_direction":"moderate","creative_hypothesis":"Allows warmth and loss to coexist.","required_followup":"Ask: 'Does that relationship feel true to what you are trying to say? Why or why not?'","claim_status":"creative_hypothesis"},{"id":"E015","name":"Victory with cost","lyric_state":"achievement","music_direction":"major/modal with unresolved extension","rhythm_direction":"driving","creative_hypothesis":"Avoids making success emotionally one-dimensional.","required_followup":"Ask: 'Does that relationship feel true to what you are trying to say? Why or why not?'","claim_status":"creative_hypothesis"},{"id":"E016","name":"Goodbye without collapse","lyric_state":"farewell","music_direction":"major/plagal","rhythm_direction":"slow/moderate","creative_hypothesis":"A farewell does not require minor harmony.","required_followup":"Ask: 'Does that relationship feel true to what you are trying to say? Why or why not?'","claim_status":"creative_hypothesis"},{"id":"E017","name":"Love without certainty","lyric_state":"affection","music_direction":"suspended/add-tone/ambiguous","rhythm_direction":"moderate","creative_hypothesis":"Extensions or withheld thirds can preserve ambiguity.","required_followup":"Ask: 'Does that relationship feel true to what you are trying to say? Why or why not?'","claim_status":"creative_hypothesis"},{"id":"E018","name":"Anger without speed","lyric_state":"anger","music_direction":"tense/low-register or static","rhythm_direction":"slow","creative_hypothesis":"Intensity can come from weight and delay rather than tempo.","required_followup":"Ask: 'Does that relationship feel true to what you are trying to say? Why or why not?'","claim_status":"creative_hypothesis"},{"id":"E019","name":"Sadness with motion","lyric_state":"loss","music_direction":"major/minor flexible","rhythm_direction":"fast","creative_hypothesis":"Tempo and groove can contradict lyric weight.","required_followup":"Ask: 'Does that relationship feel true to what you are trying to say? Why or why not?'","claim_status":"creative_hypothesis"},{"id":"E020","name":"Joy in minor","lyric_state":"celebration","music_direction":"minor/modal","rhythm_direction":"danceable","creative_hypothesis":"Mode does not dictate emotional message; groove and context matter.","required_followup":"Ask: 'Does that relationship feel true to what you are trying to say? Why or why not?'","claim_status":"creative_hypothesis"},{"id":"E021","name":"Childlike surface / adult subtext","lyric_state":"simple language","music_direction":"simple major harmony","rhythm_direction":"steady","creative_hypothesis":"Simplicity can carry complex subtext if details do the work.","required_followup":"Ask: 'Does that relationship feel true to what you are trying to say? Why or why not?'","claim_status":"creative_hypothesis"},{"id":"E022","name":"Plain truth / complex harmony","lyric_state":"direct confession","music_direction":"chromatic/extended","rhythm_direction":"flexible","creative_hypothesis":"Musical complexity can sit beneath linguistically simple lines.","required_followup":"Ask: 'Does that relationship feel true to what you are trying to say? Why or why not?'","claim_status":"creative_hypothesis"},{"id":"E023","name":"Dense words / simple harmony","lyric_state":"complex narrative","music_direction":"two/four-chord loop","rhythm_direction":"steady","creative_hypothesis":"Simple harmony can give language more cognitive space.","required_followup":"Ask: 'Does that relationship feel true to what you are trying to say? Why or why not?'","claim_status":"creative_hypothesis"},{"id":"E024","name":"Ambiguous all around","lyric_state":"mixed emotion","music_direction":"modal/tonally ambiguous","rhythm_direction":"flexible","creative_hypothesis":"Do not force a single emotion when the writer does not feel one.","required_followup":"Ask: 'Does that relationship feel true to what you are trying to say? Why or why not?'","claim_status":"creative_hypothesis"}]};
+
+// app.ui.js — the unified Songwriting Expression Tool app. Wrapped in an IIFE so
+// its many locals never collide with the engine names inlined above it in the
+// bundle. Every action calls a tested engine; the UI only renders and routes.
+(function () {
+  const $ = (s) => document.querySelector(s);
+  const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+  // ---- engines & data (DATA and engine names come from the bundle) ----------
+  const discoveryEngine = new DiscoveryEngine(DATA.discovery_questions);
+  const qById = indexQuestions(DATA.discovery_questions);
+  const copy = new Copy(DATA.ui_copy);
+  const audio = new AudioEngine();
+  const collabClient = new StubLLMClient();
+
+  // Storage: browser localStorage if we can, otherwise in-memory (never hard-fail).
+  function makeStore() {
+    try {
+      const ls = globalThis.localStorage;
+      if (ls) { ls.setItem('__probe', '1'); ls.removeItem('__probe'); return new ProjectStore(new BrowserLocalStorageAdapter()); }
+    } catch { /* fall through */ }
+    return new ProjectStore(new MemoryStorageAdapter());
+  }
+  const store = makeStore();
+  const flow = new DiscoveryFlow(discoveryEngine, store);
+
+  const state = {
+    view: 'welcome', project: null, question: null,
+    sound: { candidates: [], refined: false, playingId: null, blind: false },
+  };
+
+  async function save() {
+    if (!state.project) return;
+    try { await store.save(state.project); flashSaved(); } catch { /* ignore */ }
+  }
+  function flashSaved() {
+    const el = $('#saved'); if (!el) return;
+    el.textContent = 'saved'; el.classList.add('on');
+    clearTimeout(flashSaved._t); flashSaved._t = setTimeout(() => el.classList.remove('on'), 1200);
+  }
+  function download(name, text, type = 'text/plain') {
+    const blob = new Blob([text], { type });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = name; document.body.appendChild(a); a.click();
+    a.remove(); URL.revokeObjectURL(url);
+  }
+
+  // ---- routing --------------------------------------------------------------
+  const STAGES = [
+    ['welcome', 'Start'], ['discover', 'Discover'], ['board', 'Board'],
+    ['shape', 'Shape'], ['sound', 'Sound'], ['workshop', 'Workshop'],
+    ['collab', 'Collaborate'], ['handoff', 'Handoff'],
+  ];
+  async function show(view) {
+    state.view = view;
+    document.querySelectorAll('#nav button').forEach((b) => b.setAttribute('aria-current', b.dataset.view === view ? 'page' : 'false'));
+    const needsProject = !['welcome'].includes(view);
+    $('#nav').style.visibility = state.project ? 'visible' : 'hidden';
+    if (needsProject && !state.project) { view = 'welcome'; state.view = 'welcome'; }
+    const render = VIEWS[view];
+    $('#view').innerHTML = '<p class="muted">…</p>';
+    $('#view').innerHTML = await render();
+    afterRender(view);
+  }
+
+  // ---- WELCOME --------------------------------------------------------------
+  async function renderWelcome() {
+    const returning = await store.hasAny();
+    const w = copy.welcome({ returning });
+    const buttons = w.buttons.map((label) => {
+      const path = BUTTON_TO_ENTRY_PATH[label];
+      const act = path ? `start" data-path="${path}` : (label === 'Open my last song' ? 'openLast' : 'noop');
+      return `<button class="chip" data-act="${act}">${esc(label)}</button>`;
+    }).join('');
+    return `
+      <section class="hero">
+        <h2>${esc(w.headline)}</h2>
+        ${w.subcopy ? `<p class="sub">${esc(w.subcopy)}</p>` : ''}
+        <div class="chips">${buttons}</div>
+      </section>`;
+  }
+
+  async function startProject(path) {
+    const started = await flow.begin({ entryPath: path });
+    state.project = started.project;
+    state.question = started.question || null;
+    if (started.soundFirst) { await show('sound'); return; }
+    await show('discover');
+  }
+  async function openLast() {
+    const list = await store.list();
+    if (!list.length) return;
+    const resumed = await flow.resume(list[0].id);
+    state.project = resumed.project; state.question = resumed.question;
+    await show(resumed.question ? 'discover' : 'board');
+  }
+
+  // ---- DISCOVER -------------------------------------------------------------
+  async function renderDiscover() {
+    const q = state.question;
+    const captured = state.project.rawMaterial.length;
+    if (!q) {
+      return `<section class="stage"><h3>That's a good pile of raw material.</h3>
+        <p class="muted">You've captured ${captured} line${captured === 1 ? '' : 's'}. Take them to the board when you're ready.</p>
+        <button class="primary" data-act="go" data-view="board">Go to the board →</button></section>`;
+    }
+    return `
+      <section class="stage">
+        <p class="qmeta">${esc(q.category)} · ${esc(q.ai_rule)}</p>
+        <h3 class="question">${esc(q.prompt)}</h3>
+        <textarea id="answer" rows="3" placeholder="say it plainly — no rhyme needed"></textarea>
+        <div class="row">
+          <button class="primary" data-act="capture">Capture &amp; continue</button>
+          <button class="ghost" data-act="skip">Skip</button>
+          <button class="ghost" data-act="go" data-view="board">I have enough →</button>
+        </div>
+        <p class="muted small">${captured} captured so far · ${esc(copy.microcopy(0))}</p>
+      </section>`;
+  }
+  async function submitAnswer(text) {
+    const res = await flow.submit(state.project, text || '');
+    state.project = res.project; state.question = res.question;
+    await save(); await show('discover');
+  }
+
+  // ---- BOARD ----------------------------------------------------------------
+  async function renderBoard() {
+    const view = boardView(state.project, qById);
+    const raw = view.map((r) => `
+      <li class="rawitem">
+        <div class="rawtext">${esc(r.text)} ${r.used ? '<span class="pill">used</span>' : ''}</div>
+        <div class="muted small">from: ${esc(r.questionPrompt || '—')}</div>
+        <div class="row">
+          <select data-role="sectionfor" data-raw="${r.rawMaterialId}">${sectionOptions()}</select>
+          <button class="ghost" data-act="extract" data-raw="${r.rawMaterialId}">Pull in →</button>
+        </div>
+      </li>`).join('') || '<li class="muted">No raw material yet. Start in Discover.</li>';
+
+    const sections = state.project.sections.map(renderSectionCard).join('') || '<p class="muted">No sections yet — add one, then pull lines into it.</p>';
+    return `
+      <section class="stage two-col">
+        <div>
+          <h3>Raw material</h3>
+          <ul class="rawlist">${raw}</ul>
+        </div>
+        <div>
+          <div class="row spread"><h3>Sections</h3>
+            <span><input id="newsection" placeholder="new section (e.g. Verse 1)" />
+            <button class="ghost" data-act="addsection">Add</button></span>
+          </div>
+          ${sections}
+        </div>
+      </section>`;
+  }
+  function sectionOptions() {
+    if (!state.project.sections.length) return '<option value="">(add a section first)</option>';
+    return state.project.sections.map((s) => `<option value="${s.id}">${esc(s.name)}</option>`).join('');
+  }
+  const TRUTH = ['1', '2', '3', '4', '5'];
+  function renderSectionCard(s) {
+    const frags = s.fragments.map((f) => `
+      <li class="frag">
+        <span class="fragtext">${esc(f.text)}</span>
+        <span class="prov ${f.provenance.toLowerCase()}">${f.provenance === 'USER' ? 'you' : f.provenance === 'AI_SUGGESTION' ? 'ai' : 'tool'}</span>
+        <span class="truth" title="how true does this feel? (only you can say)">
+          ${TRUTH.map((n) => `<button class="t ${String(f.truthRating) === n ? 'sel' : ''}" data-act="truth" data-frag="${f.id}" data-val="${n}">${n}</button>`).join('')}
+        </span>
+      </li>`).join('') || '<li class="muted small">(empty)</li>';
+    return `<div class="seccard"><div class="row spread"><strong>${esc(s.name)}</strong>${s.harmonicPlan ? `<span class="pill">${esc(s.harmonicPlan.romanNumerals.join(' '))}</span>` : ''}</div>
+      <ul class="fraglist">${frags}</ul></div>`;
+  }
+
+  // ---- SHAPE (structure + craft) --------------------------------------------
+  async function renderShape() {
+    const p = state.project;
+    let structureBlock;
+    if (!p.structure) {
+      const opts = listStructures(DATA.structure_recipes).slice(0, 8).map((r) =>
+        `<li><button class="ghost" data-act="applystructure" data-id="${r.id}">${esc(r.name)}</button> <span class="muted small">${esc(r.form.join(' · '))}</span></li>`).join('');
+      structureBlock = `<h3>Pick a shape</h3><ul class="plainlist">${opts}</ul>`;
+    } else {
+      structureBlock = `<h3>Shape: ${esc(p.structure.name)}</h3><p class="muted small">${esc(p.structure.rule)}</p>`;
+    }
+    const secSel = `<select id="craftsection">${sectionOptions()}</select>`;
+    const titles = titleCandidates(p).slice(0, 6).map((t) => `<li>${esc(t.text)}</li>`).join('') || '<li class="muted small">write more lines to surface titles</li>';
+    const lines = p.sections.flatMap((s) => s.fragments.map((f) => f.text));
+    const endWords = lines.map((l) => l.trim().split(/\s+/).pop()).filter(Boolean);
+    const groups = rhymeGroups(endWords).map((g) => `<li>-${esc(g.rime)}: ${esc(g.words.join(', '))}</li>`).join('') || '<li class="muted small">no rhymes yet</li>';
+    const rep = repetitionMap(lines).words.slice(0, 8).map((w) => `${esc(w.word)}×${w.count}`).join(', ') || 'none yet';
+    const motifs = imageMap(p).slice(0, 8).map((m) => `${esc(m.word)} (${m.occurrences.length})`).join(', ') || 'none yet';
+    const craftMoves = listCraft(DATA.craft_recipes).slice(0, 6).map((c) =>
+      `<option value="${c.id}">${esc(c.name)}</option>`).join('');
+    return `
+      <section class="stage">
+        ${structureBlock}
+        <hr/>
+        <h3>Craft tools</h3>
+        <div class="row">Section: ${secSel}
+          <select id="craftmove">${craftMoves}</select>
+          <button class="ghost" data-act="experiment">Try this move</button>
+        </div>
+        <div class="grid3">
+          <div><h4>Titles from your words</h4><ul class="plainlist">${titles}</ul></div>
+          <div><h4>Rhymes (by spelling)</h4><ul class="plainlist">${groups}</ul></div>
+          <div><h4>Patterns</h4><p class="muted small">Repeated: ${rep}<br/>Motifs: ${motifs}</p></div>
+        </div>
+      </section>`;
+  }
+
+  // ---- SOUND ----------------------------------------------------------------
+  async function renderSound() {
+    const keys = ['C', 'G', 'D', 'A', 'E', 'F', 'Bb', 'Eb'];
+    const profiles = [['SETTLE', 'Let it arrive'], ['BUILD_RELEASE', 'Build, then let go'], ['STAY_OPEN', 'Leave it hanging'], ['CIRCLE', 'Keep circling'], ['HOLD_STILL', 'Hold still']];
+    const cards = state.sound.candidates.map(soundCard).join('');
+    return `
+      <section class="stage">
+        <div class="controls">
+          <label>Home note <select id="tonalCenter">${keys.map((k) => `<option>${k}</option>`).join('')}</select></label>
+          <label>Palette <select id="palette"><option value="OPEN">Open</option><option value="MAJOR">Major</option><option value="MINOR">Minor</option><option value="MODAL">Modal</option></select></label>
+          <label>Where it goes <select id="profile">${profiles.map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join('')}</select></label>
+          <label>Simple→bold <input type="range" id="complexity" min="1" max="5" value="1"/></label>
+          <label>Plain→colorful <input type="range" id="color" min="0" max="100" value="0"/></label>
+        </div>
+        <div class="row">
+          <button class="primary" data-act="generate">Hear three directions</button>
+          <label class="ghost"><input type="checkbox" id="blind"/> Listen blind</label>
+        </div>
+        <p id="note" class="muted" role="status" aria-live="polite"></p>
+        <div class="results">${cards}</div>
+      </section>`;
+  }
+  function soundCard(c) {
+    const blind = state.sound.blind && !c._revealed;
+    const labels = blind
+      ? `<button class="ghost" data-act="reveal" data-id="${c.id}">Show what this is</button>`
+      : `<div class="chords">${esc(c.chords.map((x) => x.symbol).join('  '))}</div>
+         <div class="muted small">${esc(c.romanNumerals.join(' '))} · ${esc(c.grammar.toLowerCase())}</div>`;
+    const attach = state.project.sections.length
+      ? `<div class="row"><select data-role="attachsec" data-id="${c.id}">${sectionOptions()}</select>
+         <select data-role="attachrel" data-id="${c.id}"><option value="aligned">align</option><option value="contrasted">contrast</option><option value="ambiguous" selected>ambiguous</option></select>
+         <button class="ghost" data-act="attach" data-id="${c.id}">Use for section</button></div>` : '';
+    return `<article class="direction ${state.sound.playingId === c.id ? 'playing' : ''}" data-id="${c.id}">
+      <div class="row"><button class="play" data-act="play" data-id="${c.id}" aria-label="play">▶</button>
+        <button class="play" data-act="stopaudio" aria-label="stop">◼</button>
+        <button class="ghost" data-act="refine" data-id="${c.id}">Closer →</button></div>
+      ${labels}${attach}</article>`;
+  }
+  function readIntent() {
+    return createIntent({
+      tonalCenter: $('#tonalCenter').value, palette: $('#palette').value,
+      grammar: 'AUTO', profile: $('#profile').value,
+      complexity: Number($('#complexity').value), chromaticColor: Number($('#color').value),
+    });
+  }
+
+  // ---- WORKSHOP -------------------------------------------------------------
+  async function renderWorkshop() {
+    const planned = state.project.sections.filter((s) => s.harmonicPlan);
+    if (!planned.length) return `<section class="stage"><p class="muted">No section has music yet. Go to Sound, pick a direction, and "Use for section".</p></section>`;
+    const blocks = planned.map((s) => {
+      const { explanation } = auditionRelationship(state.project, s.id, { contrastRecipes: DATA.emotional_contrast_recipes });
+      const why = explanation.map((e) => `<p class="why ${e.badge.toLowerCase()}"><span class="badge">${badgeLabel(e.badge)}</span>${esc(e.statement)}</p>`).join('');
+      const fb = s.relationshipFeedback;
+      return `<div class="seccard"><div class="row spread"><strong>${esc(s.name)}</strong><span class="pill">${esc(s.harmonicPlan.romanNumerals.join(' '))} · ${esc(s.harmonicPlan.relationToWords)}</span></div>
+        ${why}
+        <div class="row">Does it feel true?
+          <button class="ghost ${fb && fb.feelsTrue === true ? 'sel' : ''}" data-act="verdict" data-sec="${s.id}" data-val="yes">yes</button>
+          <button class="ghost ${fb && fb.feelsTrue === false ? 'sel' : ''}" data-act="verdict" data-sec="${s.id}" data-val="no">not quite</button>
+        </div></div>`;
+    }).join('');
+    const arc = harmonicArc(state.project).transitions.map((t) => `<li>${esc(t.description)}${t.hypothesisRecipeId ? ` <span class="muted small">(a pattern to explore: ${t.hypothesisRecipeId})</span>` : ''}</li>`).join('');
+    return `<section class="stage"><h3>How the music sits with the words</h3>${blocks}
+      ${arc ? `<h4>Across the song</h4><ul class="plainlist">${arc}</ul>` : ''}</section>`;
+  }
+  function badgeLabel(b) { return { THEORY: 'What it does', HYPOTHESIS: 'Might support', YOUR_MEANING: 'Your call', RESEARCH: 'Research', CRAFT: 'Craft' }[b] || b; }
+
+  // ---- COLLABORATE ----------------------------------------------------------
+  async function renderCollab() {
+    const modes = [['coach', 'Coach me'], ['help', 'Help me'], ['collaborate', 'Collaborate'], ['rescue', "I'm stuck"]];
+    return `<section class="stage">
+      <p class="muted">A collaborator that never decides your meaning. Suggestions are AI-written until you choose them.</p>
+      <div class="row">Section: <select id="collabsection">${sectionOptions()}</select></div>
+      <textarea id="collabtext" rows="2" placeholder="what are you working on / stuck on?"></textarea>
+      <div class="chips">${modes.map(([m, l]) => `<button class="chip" data-act="collab" data-mode="${m}">${esc(l)}</button>`).join('')}</div>
+      <div id="collabout"></div>
+    </section>`;
+  }
+  async function runCollab(mode) {
+    const secId = $('#collabsection') ? $('#collabsection').value : null;
+    const sec = state.project.sections.find((s) => s.id === secId);
+    const ctx = { userText: $('#collabtext').value, authoritativeTheory: sec && sec.harmonicPlan ? { tonalCenter: sec.harmonicPlan.tonalCenter, romanNumerals: sec.harmonicPlan.romanNumerals } : null };
+    const res = await collaborate(collabClient, mode, ctx);
+    const out = $('#collabout');
+    if (res.safety) { out.innerHTML = `<div class="safety">${esc(res.response)}</div>`; return; }
+    const items = res.suggestions.map((s, i) => `<li>[${esc(s.type)}] ${esc(s.text)}
+      ${s.fragment && secId ? `<button class="ghost" data-act="accept" data-mode="${mode}" data-i="${i}" data-sec="${secId}">keep in section</button>` : ''}</li>`).join('');
+    state._lastSuggestions = res.suggestions;
+    out.innerHTML = `${res.offline ? '<p class="muted small">collaborator offline — here\'s a deterministic nudge:</p>' : ''}
+      <ul class="plainlist">${items}</ul>
+      ${res.reminder ? `<p class="muted small">ⓘ ${esc(res.reminder)}</p>` : ''}
+      ${res.rejected && res.rejected.length ? `<p class="muted small">${res.rejected.length} suggestion(s) blocked by the guards.</p>` : ''}`;
+  }
+
+  // ---- HANDOFF --------------------------------------------------------------
+  async function renderHandoff() {
+    const sheet = buildLeadSheet(state.project);
+    const md = toMarkdown(sheet);
+    return `<section class="stage">
+      <div class="row"><h3>Lead sheet</h3>
+        <button class="ghost" data-act="dl-md">Download .md</button>
+        <button class="ghost" data-act="dl-map">Download chord map</button>
+        <button class="ghost" data-act="dl-json">Export song (JSON)</button>
+        <button class="ghost danger" data-act="delete">Delete this song</button>
+      </div>
+      <pre class="leadsheet">${esc(md)}</pre>
+    </section>`;
+  }
+
+  // ---- action delegation ----------------------------------------------------
+  const VIEWS = { welcome: renderWelcome, discover: renderDiscover, board: renderBoard, shape: renderShape, sound: renderSound, workshop: renderWorkshop, collab: renderCollab, handoff: renderHandoff };
+
+  function afterRender(view) {
+    if (view === 'sound') { const n = $('#note'); if (n && !state.sound.candidates.length) n.textContent = 'Set the dials, then hear three directions.'; }
+  }
+
+  document.addEventListener('click', async (ev) => {
+    const b = ev.target.closest('[data-act]');
+    if (!b) return;
+    const act = b.dataset.act;
+    try {
+      if (act === 'start') return startProject(b.dataset.path);
+      if (act === 'openLast') return openLast();
+      if (act === 'go') return show(b.dataset.view);
+      if (act === 'capture') { const t = $('#answer').value; return submitAnswer(t); }
+      if (act === 'skip') return submitAnswer('');
+      if (act === 'addsection') { const n = $('#newsection').value.trim(); if (n) { addSection(state.project, { name: n }); await save(); } return show('board'); }
+      if (act === 'extract') {
+        const sel = document.querySelector(`[data-role="sectionfor"][data-raw="${b.dataset.raw}"]`);
+        if (sel && sel.value) { extractFragment(state.project, { rawMaterialId: b.dataset.raw, sectionId: sel.value }); await save(); }
+        return show('board');
+      }
+      if (act === 'truth') { setFragmentTruth(state.project, b.dataset.frag, Number(b.dataset.val), 'user'); await save(); return show('board'); }
+      if (act === 'applystructure') { applyStructure(state.project, DATA.structure_recipes, b.dataset.id, { replace: true }); await save(); return show('shape'); }
+      if (act === 'experiment') { const sec = $('#craftsection').value; const mv = $('#craftmove').value; if (sec) { startExperiment(state.project, DATA.craft_recipes, sec, mv); await save(); } return; }
+      if (act === 'generate') { state.sound.blind = $('#blind').checked; state.sound.refined = false; const r = audition(readIntent(), { blind: state.sound.blind }); state.sound.candidates = r.candidates; audio.stop(); state.sound.playingId = null; await show('sound'); const n = $('#note'); if (n) n.textContent = state.sound.blind ? 'Listen first — which is closer to what you mean?' : 'Three directions. Play each, then choose.'; return; }
+      if (act === 'play') { const c = state.sound.candidates.find((x) => x.id === b.dataset.id); audio.play(c, { tempo: 84, texture: 'pad' }); state.sound.playingId = c.id; document.querySelectorAll('.direction').forEach((el) => el.classList.toggle('playing', el.dataset.id === c.id)); return; }
+      if (act === 'stopaudio') { audio.stop(); state.sound.playingId = null; document.querySelectorAll('.direction').forEach((el) => el.classList.remove('playing')); return; }
+      if (act === 'reveal') { const c = state.sound.candidates.find((x) => x.id === b.dataset.id); c._revealed = true; return show('sound'); }
+      if (act === 'refine') { const c = state.sound.candidates.find((x) => x.id === b.dataset.id); state.sound.candidates = refine(c, { blind: state.sound.blind }).variants; await show('sound'); const n = $('#note'); if (n) n.textContent = 'Three variations — each changes one thing.'; return; }
+      if (act === 'attach') {
+        const c = state.sound.candidates.find((x) => x.id === b.dataset.id);
+        const sec = document.querySelector(`[data-role="attachsec"][data-id="${b.dataset.id}"]`).value;
+        const rel = document.querySelector(`[data-role="attachrel"][data-id="${b.dataset.id}"]`).value;
+        if (sec) { attachPlan(state.project, sec, c, rel); await save(); }
+        return show('workshop');
+      }
+      if (act === 'verdict') { recordRelationshipFeedback(state.project, b.dataset.sec, { feelsTrue: b.dataset.val === 'yes' }); await save(); return show('workshop'); }
+      if (act === 'collab') return runCollab(b.dataset.mode);
+      if (act === 'accept') { const s = state._lastSuggestions[Number(b.dataset.i)]; if (s && s.fragment) { acceptSuggestion(state.project, b.dataset.sec, s, {}); await save(); } return; }
+      if (act === 'dl-md') return download(`${slug(state.project.title)}-lead-sheet.md`, toMarkdown(buildLeadSheet(state.project)), 'text/markdown');
+      if (act === 'dl-map') return download(`${slug(state.project.title)}-chords.txt`, toChordMap(buildLeadSheet(state.project)));
+      if (act === 'dl-json') { const j = await store.exportProject(state.project.id); return download(`${slug(state.project.title)}.json`, j || '{}', 'application/json'); }
+      if (act === 'delete') { if (confirm('Delete this song? This cannot be undone.')) { await store.remove(state.project.id); state.project = null; return show('welcome'); } }
+    } catch (e) { console.error(e); }
+  });
+  function slug(s) { return String(s || 'song').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'song'; }
+
+  // ---- nav + boot -----------------------------------------------------------
+  $('#nav').innerHTML = STAGES.map(([v, l]) => `<button data-view="${v}" data-act="go">${esc(l)}</button>`).join('');
+  show('welcome');
+})();
+
+</script>
+</body>
+</html>
